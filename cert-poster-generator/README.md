@@ -26,6 +26,20 @@ npm install
 npm run dev
 ```
 
+### Microsoft Clarity
+
+Clarity tracking is wired in as an optional client-side integration.
+
+Set your Clarity project ID in a Vite environment variable:
+
+```bash
+VITE_CLARITY_PROJECT_ID=your-project-id
+```
+
+For local development, copy the value into `.env`.
+
+For Azure Static Web Apps, add `VITE_CLARITY_PROJECT_ID` as an application setting so it is available during the build.
+
 ### Build
 
 ```bash

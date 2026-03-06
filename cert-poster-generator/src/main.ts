@@ -13,6 +13,40 @@ import {
 const PREVIEW_SCALE = 0.7;
 const EXPORT_SCALE = 2.4;
 
+function initializeMicrosoftClarity(): void {
+  const projectId = import.meta.env.VITE_CLARITY_PROJECT_ID?.trim();
+  if (!projectId || document.getElementById('microsoft-clarity')) {
+    return;
+  }
+
+  type ClarityWindow = Window & {
+    clarity?: (...args: unknown[]) => void;
+  };
+
+  const clarityWindow = window as ClarityWindow;
+
+  ((clarityApiWindow: ClarityWindow, documentRef: Document, tagName: 'script', scriptId: string) => {
+    clarityApiWindow.clarity = clarityApiWindow.clarity ?? function (...args: unknown[]) {
+      (clarityApiWindow.clarity as ((...innerArgs: unknown[]) => void) & { q?: unknown[][] }).q =
+        (clarityApiWindow.clarity as ((...innerArgs: unknown[]) => void) & { q?: unknown[][] }).q ?? [];
+      (clarityApiWindow.clarity as ((...innerArgs: unknown[]) => void) & { q?: unknown[][] }).q?.push(args);
+    };
+
+    const script = documentRef.createElement(tagName);
+    script.async = true;
+    script.id = scriptId;
+    script.src = `https://www.clarity.ms/tag/${projectId}`;
+
+    const firstScript = documentRef.getElementsByTagName(tagName)[0];
+    if (firstScript?.parentNode) {
+      firstScript.parentNode.insertBefore(script, firstScript);
+      return;
+    }
+
+    documentRef.head.appendChild(script);
+  })(clarityWindow, document, 'script', 'microsoft-clarity');
+}
+
 interface AppState {
   certifications: MicrosoftCertification[];
   selectedIds: Set<string>;
@@ -340,6 +374,7 @@ downloadButton.addEventListener('click', async () => {
 });
 
 async function initialize(): Promise<void> {
+  initializeMicrosoftClarity();
   state.certifications = microsoftCertifications;
   syncUi();
   sourceNote.textContent = `Reference snapshot: ${MICROSOFT_CERTIFICATIONS_SOURCE_DATE} • ${MICROSOFT_CERTIFICATIONS_SOURCE_URL}`;
