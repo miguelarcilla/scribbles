@@ -1,5 +1,4 @@
 param virtualNetworks_anarcill_network_hub_vnet_name string
-param networkSecurityGroups_anarcill_network_hub_vnet_AzureBastionSubnet_nsg_southeastasia_externalid string
 param networkSecurityGroups_anarcill_network_hub_vnet_default_nsg_southeastasia_externalid string
 param natGateways_anarcill_network_hub_vnet_natgw_externalid string
 param virtualNetworks_anarcill_network_spoke_eastus2_vnet_externalid string
@@ -27,20 +26,6 @@ resource virtualNetworks_anarcill_network_hub_vnet_name_resource 'Microsoft.Netw
         name: 'GatewaySubnet'
         properties: {
           addressPrefix: '10.0.2.0/24'
-          delegations: []
-          privateEndpointNetworkPolicies: 'Disabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          defaultOutboundAccess: false
-        }
-      }
-      {
-        name: 'AzureBastionSubnet'
-        properties: {
-          addressPrefix: '10.0.1.0/26'
-          networkSecurityGroup: {
-            id: networkSecurityGroups_anarcill_network_hub_vnet_AzureBastionSubnet_nsg_southeastasia_externalid
-          }
-          serviceEndpoints: []
           delegations: []
           privateEndpointNetworkPolicies: 'Disabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
@@ -162,22 +147,6 @@ resource virtualNetworks_anarcill_network_hub_vnet_name_resource 'Microsoft.Netw
   }
 }
 
-resource virtualNetworks_anarcill_network_hub_vnet_name_AzureBastionSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' = {
-  parent: virtualNetworks_anarcill_network_hub_vnet_name_resource
-  name: 'AzureBastionSubnet'
-  properties: {
-    addressPrefix: '10.0.1.0/26'
-    networkSecurityGroup: {
-      id: networkSecurityGroups_anarcill_network_hub_vnet_AzureBastionSubnet_nsg_southeastasia_externalid
-    }
-    serviceEndpoints: []
-    delegations: []
-    privateEndpointNetworkPolicies: 'Disabled'
-    privateLinkServiceNetworkPolicies: 'Enabled'
-    defaultOutboundAccess: false
-  }
-}
-
 resource virtualNetworks_anarcill_network_hub_vnet_name_AzureFirewallManagementSubnet 'Microsoft.Network/virtualNetworks/subnets@2024-07-01' = {
   parent: virtualNetworks_anarcill_network_hub_vnet_name_resource
   name: 'AzureFirewallManagementSubnet'
@@ -186,6 +155,7 @@ resource virtualNetworks_anarcill_network_hub_vnet_name_AzureFirewallManagementS
     delegations: []
     privateEndpointNetworkPolicies: 'Disabled'
     privateLinkServiceNetworkPolicies: 'Enabled'
+    defaultOutboundAccess: false
   }
 }
 
@@ -197,6 +167,7 @@ resource virtualNetworks_anarcill_network_hub_vnet_name_AzureFirewallSubnet 'Mic
     delegations: []
     privateEndpointNetworkPolicies: 'Disabled'
     privateLinkServiceNetworkPolicies: 'Enabled'
+    defaultOutboundAccess: false
   }
 }
 
@@ -206,7 +177,7 @@ resource virtualNetworks_anarcill_network_hub_vnet_name_default 'Microsoft.Netwo
   properties: {
     addressPrefix: '10.0.0.0/24'
     networkSecurityGroup: {
-      id: networkSecurityGroups_anarcill_network_hub_vnet_default_nsg_southeastasia_externalid
+            id: networkSecurityGroups_anarcill_network_hub_vnet_default_nsg_southeastasia_externalid
     }
     delegations: []
     privateEndpointNetworkPolicies: 'Disabled'
@@ -234,9 +205,6 @@ resource virtualNetworks_anarcill_network_hub_vnet_name_PublicSubnet 'Microsoft.
     addressPrefix: '10.0.3.0/24'
     networkSecurityGroup: {
       id: networkSecurityGroups_anarcill_network_hub_vnet_default_nsg_southeastasia_externalid
-    }
-    natGateway: {
-      id: natGateways_anarcill_network_hub_vnet_natgw_externalid
     }
     delegations: [ {
         name: 'Microsoft.ApiManagement/service'
