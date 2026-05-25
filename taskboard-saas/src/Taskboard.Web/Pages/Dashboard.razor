@@ -1,0 +1,58 @@
+@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Taskboard.Web.Services
+@using Taskboard.Shared.DTOs
+@attribute [Authorize]
+@inject IBoardStateService BoardState
+@inject IApiClient ApiClient
+@inject NavigationManager Nav
+
+<PageTitle>Dashboard — Taskboard</PageTitle>
+
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>My Boards</h1>
+        <button class="btn btn-primary" @onclick="ShowCreateBoard">+ New Board</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p>Loading boards…</p>
+    }
+    else if (!BoardState.Boards.Any())
+    {
+        <div class="empty-state">
+            <p>No boards yet. Create your first board to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="board-grid">
+            @foreach (var board in BoardState.Boards)
+            {
+                <div class="board-card" @onclick="() => GoToBoard(board.Id)">
+                    <h3>@board.Name</h3>
+                    @if (!string.IsNullOrEmpty(board.Description))
+                    {
+                        <p>@board.Description</p>
+                    }
+                    <span class="board-meta">@board.MemberIds.Count members</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await BoardState.LoadBoardsAsync();
+        _loading = false;
+    }
+
+    private void GoToBoard(string boardId) => Nav.NavigateTo($"/board/{boardId}");
+    private void ShowCreateBoard() => Nav.NavigateTo("/boards/new");
+}

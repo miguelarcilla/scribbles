@@ -1,0 +1,72 @@
+@page "/board/{BoardId}"
+@using Microsoft.AspNetCore.Authorization
+@using Taskboard.Web.Services
+@using Taskboard.Shared.DTOs
+@using Taskboard.Shared
+@attribute [Authorize]
+@inject IApiClient ApiClient
+@inject IBoardStateService BoardState
+
+<PageTitle>@(_board?.Name ?? "Board") — Taskboard</PageTitle>
+
+@if (_board is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="board-view">
+        <div class="board-header">
+            <h1>@_board.Name</h1>
+            @if (!string.IsNullOrEmpty(_board.Description))
+            {
+                <p class="board-description">@_board.Description</p>
+            }
+        </div>
+
+        <div class="task-columns">
+            @foreach (var status in Taskboard.Shared.TaskStatus.All)
+            {
+                <div class="task-column">
+                    <h3 class="column-header">@status</h3>
+                    <div class="task-list">
+                        @foreach (var task in _tasks.Where(t => t.Status == status))
+                        {
+                            <div class="task-card priority-@task.Priority.ToLower()">
+                                <p class="task-title">@task.Title</p>
+                                @if (!string.IsNullOrEmpty(task.AssigneeId))
+                                {
+                                    <span class="task-assignee">👤 @task.AssigneeId</span>
+                                }
+                                @if (task.DueDate.HasValue)
+                                {
+                                    <span class="task-due">📅 @task.DueDate.Value.ToString("MMM d")</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <button class="btn btn-ghost btn-sm" @onclick="() => AddTask(status)">+ Add task</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string BoardId { get; set; } = default!;
+
+    private BoardDto? _board;
+    private IReadOnlyList<TaskDto> _tasks = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await BoardState.SelectBoardAsync(BoardId);
+        _board = BoardState.SelectedBoard;
+        _tasks = BoardState.CurrentTasks;
+    }
+
+    private void AddTask(string status)
+    {
+        // TODO: open task creation dialog
+    }
+}

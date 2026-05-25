@@ -1,0 +1,16 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="page">
+    <nav class="sidebar">
+        <NavMenu />
+    </nav>
+    <main>
+        <div class="top-row px-4 auth">
+            <TopBar />
+        </div>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
