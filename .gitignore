@@ -1,0 +1,16 @@
+## Build output
+taskboard-saas/src/Taskboard.Api/bin/
+taskboard-saas/src/Taskboard.Api/obj/
+taskboard-saas/src/Taskboard.Web/bin/
+taskboard-saas/src/Taskboard.Web/obj/
+taskboard-saas/src/Taskboard.Shared/bin/
+taskboard-saas/src/Taskboard.Shared/obj/
+taskboard-saas/tests/**/bin/
+taskboard-saas/tests/**/obj/
+
+## Bicep compiled output
+taskboard-saas/infra/main.json
+taskboard-saas/infra/modules/*.json
+
+## User secrets / sensitive config
+**/appsettings.*.local.json
