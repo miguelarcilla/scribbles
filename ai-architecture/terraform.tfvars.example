@@ -1,0 +1,21 @@
+location      = "eastus2"
+workload_name = "foundryref"
+environment   = "prod"
+
+vnet_address_space = "192.168.0.0/16"
+
+gpt_model = {
+  name     = "gpt-4o"
+  version  = "2024-11-20"
+  sku_name = "GlobalStandard"
+  capacity = 50
+}
+
+publisher_name  = "Contoso AI Platform"
+publisher_email = "platform-team@contoso.example"
+
+tags = {
+  workload   = "microsoft-foundry-baseline"
+  iac        = "terraform"
+  costcenter = "ai-platform"
+}
