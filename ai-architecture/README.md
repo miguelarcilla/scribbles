@@ -61,6 +61,28 @@ terraform plan
 terraform apply
 ```
 
+### One-command app deploy (build/push/apply)
+
+For the chat app under `app/`, you can run a staged deployment that:
+1. Creates prerequisite infra (including ACR),
+2. Builds and pushes the app image,
+3. Applies the full Terraform stack.
+
+```powershell
+cd ai-architecture
+./deploy-app.ps1 -ImageName foundry-chat -ImageTag latest
+```
+
+Optional flags:
+- `-SubscriptionId <subscription-guid-or-name>`
+- `-AutoApprove`
+
+Example:
+
+```powershell
+./deploy-app.ps1 -ImageName foundry-chat -ImageTag v1 -AutoApprove
+```
+
 ### Requirements
 
 - Terraform >= 1.6
@@ -89,4 +111,4 @@ terraform apply
 - **Azure Firewall** (`Standard`) and **DDoS** add cost; firewall is included to demonstrate the agent egress story.
 - **Foundry `azapi` resources** (`accounts`, `projects`, `connections`, `capabilityHosts`) target `2025-06-01`; schema validation is disabled on the capability host because it is a preview shape. Verify against the latest API version.
 - Add **Application Gateway + WAF** in front of APIM/Container Apps for internet-facing exposure.
-- The container image is a placeholder (`mcr.microsoft.com/k8se/quickstart`); replace with your chat app image.
+- The container image is pulled from ACR and defaults to `foundry-chat:latest` (override with `app_image_name` / `app_image_tag`).
