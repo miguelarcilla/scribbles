@@ -22,6 +22,15 @@ resource "azurerm_application_insights" "this" {
   tags                = var.tags
 }
 
+resource "azurerm_container_registry" "this" {
+  name                = "acr${substr(replace(var.name_suffix, "-", ""), 0, 20)}${var.random_suffix}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = "Standard"
+  admin_enabled       = false
+  tags                = var.tags
+}
+
 resource "azurerm_key_vault" "this" {
   name                          = "kv-${substr(replace(var.name_suffix, "-", ""), 0, 16)}${var.random_suffix}"
   location                      = var.location
