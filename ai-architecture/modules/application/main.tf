@@ -34,13 +34,18 @@ resource "azurerm_container_app" "chat" {
     type = "SystemAssigned"
   }
 
+  registry {
+    server   = var.container_registry_login_server
+    identity = "System"
+  }
+
   template {
     min_replicas = 1
     max_replicas = 10
 
     container {
       name   = "chatui"
-      image  = "mcr.microsoft.com/k8se/quickstart:latest"
+      image  = "${var.container_registry_login_server}/${var.app_image_name}:${var.app_image_tag}"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -70,8 +75,8 @@ resource "azurerm_container_app" "chat" {
   }
 
   ingress {
-    external_enabled = false
-    target_port      = 80
+    external_enabled = true
+    target_port      = 50505
     transport        = "auto"
 
     traffic_weight {
@@ -79,4 +84,13 @@ resource "azurerm_container_app" "chat" {
       percentage      = 100
     }
   }
+}
+
+resource "azurerm_role_assignment" "chat_acr_pull" {
+  scope                = var.container_registry_id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_container_app.chat.identity[0].principal_id
+
+  # Role assignment can race with AAD propagation for just-created identities.
+  skip_service_principal_aad_check = true
 }

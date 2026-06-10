@@ -31,6 +31,22 @@ variable "foundry_project_endpoint" {
   type = string
 }
 
+variable "container_registry_id" {
+  type = string
+}
+
+variable "container_registry_login_server" {
+  type = string
+}
+
+variable "app_image_name" {
+  type = string
+}
+
+variable "app_image_tag" {
+  type = string
+}
+
 variable "tags" {
   type = map(string)
 }
