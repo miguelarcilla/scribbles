@@ -1,0 +1,94 @@
+%% Microsoft Foundry — secured with Private Endpoints, exposed and scaled via Azure API Management
+%% Reference architecture (Terraform: ai-architecture/)
+flowchart TB
+    user([Application User])
+
+    subgraph sub["Azure Subscription / Resource Group"]
+        subgraph vnet["Workload VNet 192.168.0.0/16"]
+
+            subgraph net["Network Layer — subnets, NSGs, route tables"]
+                direction TB
+                snetApim["snet-apim 192.168.2.0/24"]
+                snetApp["snet-containerapps 192.168.0.0/23<br/>(delegated Microsoft.App/environments)"]
+                snetAgents["snet-agentsEgress 192.168.3.0/24<br/>(delegated, Foundry agent egress)"]
+                snetPe["snet-privateEndpoints 192.168.4.0/24"]
+                snetData["snet-data 192.168.5.0/24"]
+                snetFw["AzureFirewallSubnet 192.168.6.0/26"]
+                snetMgmt["Bastion + jumpbox + buildAgents"]
+            end
+
+            subgraph apimL["Exposure Layer"]
+                apim["Azure API Management (Internal VNet)<br/>round-robin LB · managed identity<br/>Cognitive Services OpenAI User"]
+            end
+
+            subgraph appL["Application Layer"]
+                aca["Azure Container Apps (VNet injected)<br/>Chat UI / Orchestration · System MI"]
+            end
+
+            subgraph aiL["AI Layer"]
+                foundry["Microsoft Foundry account + project<br/>Foundry Agent Service · GPT deployment"]
+                search["Azure AI Search<br/>(knowledge / vector store)"]
+            end
+
+            subgraph dataL["Storage & Data Layer (Foundry BYO deps)"]
+                storage["Azure Storage (blob)"]
+                cosmos["Azure Cosmos DB<br/>(agent thread / chat memory)"]
+            end
+
+            subgraph mgmtL["Management Layer"]
+                kv["Key Vault"]
+                law["Log Analytics"]
+                appi["Application Insights"]
+            end
+
+            fw["Azure Firewall<br/>(egress FQDN filtering)"]
+
+            subgraph peL["Private Endpoints (in snet-privateEndpoints)"]
+                peFoundry(["PE: Foundry account"])
+                peSearch(["PE: AI Search"])
+                peStorage(["PE: Blob"])
+                peCosmos(["PE: Cosmos SQL"])
+                peKv(["PE: Key Vault"])
+            end
+        end
+    end
+
+    %% Request path
+    user -->|HTTPS| apim
+    apim -->|"private, MI auth"| peFoundry
+    aca -->|"inference via gateway"| apim
+    aca -.->|telemetry| appi
+
+    %% Foundry to private endpoints
+    peFoundry --- foundry
+    foundry -->|grounding| peSearch
+    peSearch --- search
+    foundry -->|files| peStorage
+    peStorage --- storage
+    foundry -->|chat memory| peCosmos
+    peCosmos --- cosmos
+    aca -->|secrets| peKv
+    peKv --- kv
+
+    %% Agent egress through firewall
+    foundry -. "agent egress (snet-agentsEgress)" .-> fw
+    aca -. egress .-> fw
+    fw -->|filtered 443| internet([Internet / external tools])
+
+    %% Observability
+    foundry -.-> law
+    apim -.-> law
+    aca -.-> law
+    storage -.-> law
+    cosmos -.-> law
+    appi --- law
+
+    classDef ai fill:#e3f0ff,stroke:#0050a0;
+    classDef data fill:#eafbe7,stroke:#2e7d32;
+    classDef mgmt fill:#fff4e0,stroke:#b26a00;
+    classDef net fill:#f2f2f2,stroke:#666;
+    classDef pe fill:#fde2e2,stroke:#b00020;
+    class foundry,search,apim ai;
+    class storage,cosmos data;
+    class kv,law,appi mgmt;
+    class peFoundry,peSearch,peStorage,peCosmos,peKv pe;
