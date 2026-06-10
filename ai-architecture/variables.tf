@@ -4,6 +4,12 @@ variable "location" {
   default     = "eastus2"
 }
 
+variable "search_location" {
+  description = "Azure region for Azure AI Search. Keep separate from location to work around temporary regional capacity constraints."
+  type        = string
+  default     = "eastus"
+}
+
 variable "workload_name" {
   description = "Short workload identifier used to compose resource names (lowercase, alphanumeric)."
   type        = string
@@ -18,7 +24,7 @@ variable "workload_name" {
 variable "environment" {
   description = "Environment short name (e.g. dev, test, prod)."
   type        = string
-  default     = "prod"
+  default     = "dev"
 }
 
 variable "vnet_address_space" {

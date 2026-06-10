@@ -26,9 +26,9 @@ output "data_subnet_id" {
   value = azurerm_subnet.data.id
 }
 
-output "firewall_private_ip" {
-  value = azurerm_firewall.this.ip_configuration[0].private_ip_address
-}
+# output "firewall_private_ip" {
+#   value = azurerm_firewall.this.ip_configuration[0].private_ip_address
+# }
 
 output "private_dns_zone_ids" {
   description = "Map of private DNS zone key -> zone resource ID."

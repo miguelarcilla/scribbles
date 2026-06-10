@@ -17,7 +17,7 @@ resource "azurerm_storage_account" "this" {
   https_traffic_only_enabled      = true
   public_network_access_enabled   = false
   allow_nested_items_to_be_public = false
-  shared_access_key_enabled       = true
+  shared_access_key_enabled       = false
   tags                            = var.tags
 
   network_rules {
@@ -25,11 +25,6 @@ resource "azurerm_storage_account" "this" {
     bypass         = ["AzureServices"]
   }
 
-  blob_properties {
-    delete_retention_policy {
-      days = 7
-    }
-  }
 }
 
 resource "azurerm_private_endpoint" "blob" {
@@ -71,7 +66,7 @@ resource "azurerm_cosmosdb_account" "this" {
   geo_location {
     location          = var.location
     failover_priority = 0
-    zone_redundant    = true
+    zone_redundant    = false
   }
 
   capabilities {

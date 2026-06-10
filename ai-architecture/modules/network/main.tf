@@ -46,7 +46,7 @@ resource "azurerm_virtual_network" "this" {
 ###############################################################################
 
 resource "azurerm_subnet" "container_apps" {
-  name                 = "snet-containerapps"
+  name                 = "ContainerAppsSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [local.subnet_prefixes.container_apps]
@@ -61,14 +61,14 @@ resource "azurerm_subnet" "container_apps" {
 }
 
 resource "azurerm_subnet" "apim" {
-  name                 = "snet-apim"
+  name                 = "ApiManagementSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [local.subnet_prefixes.apim]
 }
 
 resource "azurerm_subnet" "agents_egress" {
-  name                 = "snet-agentsEgress"
+  name                 = "AgentsEgressSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [local.subnet_prefixes.agents_egress]
@@ -83,7 +83,7 @@ resource "azurerm_subnet" "agents_egress" {
 }
 
 resource "azurerm_subnet" "private_endpoints" {
-  name                              = "snet-privateEndpoints"
+  name                              = "PrivateEndpointsSubnet"
   resource_group_name               = var.resource_group_name
   virtual_network_name              = azurerm_virtual_network.this.name
   address_prefixes                  = [local.subnet_prefixes.private_endpoints]
@@ -91,7 +91,7 @@ resource "azurerm_subnet" "private_endpoints" {
 }
 
 resource "azurerm_subnet" "data" {
-  name                 = "snet-data"
+  name                 = "DataSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [local.subnet_prefixes.data]
@@ -112,14 +112,14 @@ resource "azurerm_subnet" "bastion" {
 }
 
 resource "azurerm_subnet" "jumpbox" {
-  name                 = "snet-jumpbox"
+  name                 = "JumpboxSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [local.subnet_prefixes.jumpbox]
 }
 
 resource "azurerm_subnet" "build_agents" {
-  name                 = "snet-buildAgents"
+  name                 = "BuildAgentsSubnet"
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.name
   address_prefixes     = [local.subnet_prefixes.build_agents]
@@ -299,6 +299,30 @@ resource "azurerm_network_security_group" "bastion" {
   }
 
   security_rule {
+    name                       = "Allow.In.AzureLoadBalancer"
+    priority                   = 120
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "AzureLoadBalancer"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "Allow.In.BastionDataPlane"
+    priority                   = 130
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["8080", "5701"]
+    source_address_prefix      = "VirtualNetwork"
+    destination_address_prefix = "VirtualNetwork"
+  }
+
+  security_rule {
     name                       = "Allow.Out.Ssh.Rdp.VNet"
     priority                   = 100
     direction                  = "Outbound"
@@ -308,6 +332,30 @@ resource "azurerm_network_security_group" "bastion" {
     destination_port_ranges    = ["22", "3389"]
     source_address_prefix      = "*"
     destination_address_prefix = "VirtualNetwork"
+  }
+
+  security_rule {
+    name                       = "Allow.Out.AzureCloud.Https"
+    priority                   = 110
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "AzureCloud"
+  }
+
+  security_rule {
+    name                       = "Allow.Out.Internet.Http"
+    priority                   = 120
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "Internet"
   }
 }
 
@@ -370,107 +418,107 @@ resource "azurerm_subnet_network_security_group_association" "build_agents" {
 # Azure Firewall - inspects/filters all egress from the agent + compute tiers
 ###############################################################################
 
-resource "azurerm_public_ip" "firewall" {
-  name                = "pip-fw-${var.name_suffix}"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  allocation_method   = "Static"
-  sku                 = "Standard"
-  zones               = ["1", "2", "3"]
-  tags                = var.tags
-}
+# resource "azurerm_public_ip" "firewall" {
+#   name                = "pip-fw-${var.name_suffix}"
+#   location            = var.location
+#   resource_group_name = var.resource_group_name
+#   allocation_method   = "Static"
+#   sku                 = "Standard"
+#   zones               = ["1", "2", "3"]
+#   tags                = var.tags
+# }
 
-resource "azurerm_firewall_policy" "this" {
-  name                = "afwp-${var.name_suffix}"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  sku                 = "Standard"
-  tags                = var.tags
-}
+# resource "azurerm_firewall_policy" "this" {
+#   name                = "afwp-${var.name_suffix}"
+#   location            = var.location
+#   resource_group_name = var.resource_group_name
+#   sku                 = "Standard"
+#   tags                = var.tags
+# }
 
-resource "azurerm_firewall_policy_rule_collection_group" "egress" {
-  name               = "egress-rules"
-  firewall_policy_id = azurerm_firewall_policy.this.id
-  priority           = 500
+# resource "azurerm_firewall_policy_rule_collection_group" "egress" {
+#   name               = "egress-rules"
+#   firewall_policy_id = azurerm_firewall_policy.this.id
+#   priority           = 500
 
-  application_rule_collection {
-    name     = "allow-ai-egress"
-    priority = 500
-    action   = "Allow"
+#   application_rule_collection {
+#     name     = "allow-ai-egress"
+#     priority = 500
+#     action   = "Allow"
 
-    rule {
-      name = "allow-microsoft-and-ai-fqdns"
-      protocols {
-        type = "Https"
-        port = 443
-      }
-      source_addresses = [
-        local.subnet_prefixes.agents_egress,
-        local.subnet_prefixes.container_apps,
-      ]
-      destination_fqdns = [
-        "*.openai.azure.com",
-        "*.cognitiveservices.azure.com",
-        "*.services.ai.azure.com",
-        "*.search.windows.net",
-        "login.microsoftonline.com",
-        "management.azure.com",
-        "*.blob.core.windows.net",
-        "*.documents.azure.com",
-      ]
-    }
-  }
-}
+#     rule {
+#       name = "allow-microsoft-and-ai-fqdns"
+#       protocols {
+#         type = "Https"
+#         port = 443
+#       }
+#       source_addresses = [
+#         local.subnet_prefixes.agents_egress,
+#         local.subnet_prefixes.container_apps,
+#       ]
+#       destination_fqdns = [
+#         "*.openai.azure.com",
+#         "*.cognitiveservices.azure.com",
+#         "*.services.ai.azure.com",
+#         "*.search.windows.net",
+#         "login.microsoftonline.com",
+#         "management.azure.com",
+#         "*.blob.core.windows.net",
+#         "*.documents.azure.com",
+#       ]
+#     }
+#   }
+# }
 
-resource "azurerm_firewall" "this" {
-  name                = "afw-${var.name_suffix}"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  sku_name            = "AZFW_VNet"
-  sku_tier            = "Standard"
-  firewall_policy_id  = azurerm_firewall_policy.this.id
-  zones               = ["1", "2", "3"]
-  tags                = var.tags
+# resource "azurerm_firewall" "this" {
+#   name                = "afw-${var.name_suffix}"
+#   location            = var.location
+#   resource_group_name = var.resource_group_name
+#   sku_name            = "AZFW_VNet"
+#   sku_tier            = "Standard"
+#   firewall_policy_id  = azurerm_firewall_policy.this.id
+#   zones               = ["1", "2", "3"]
+#   tags                = var.tags
 
-  ip_configuration {
-    name                 = "fw-ipconfig"
-    subnet_id            = azurerm_subnet.firewall.id
-    public_ip_address_id = azurerm_public_ip.firewall.id
-  }
-}
+#   ip_configuration {
+#     name                 = "fw-ipconfig"
+#     subnet_id            = azurerm_subnet.firewall.id
+#     public_ip_address_id = azurerm_public_ip.firewall.id
+#   }
+# }
 
 ###############################################################################
 # Egress route table - forces compute/agent egress through the firewall
 ###############################################################################
 
-resource "azurerm_route_table" "egress" {
-  name                = "rt-egress-${var.name_suffix}"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  tags                = var.tags
+# resource "azurerm_route_table" "egress" {
+#   name                = "rt-egress-${var.name_suffix}"
+#   location            = var.location
+#   resource_group_name = var.resource_group_name
+#   tags                = var.tags
 
-  route {
-    name                   = "default-to-firewall"
-    address_prefix         = "0.0.0.0/0"
-    next_hop_type          = "VirtualAppliance"
-    next_hop_in_ip_address = azurerm_firewall.this.ip_configuration[0].private_ip_address
-  }
-}
+#   route {
+#     name                   = "default-to-firewall"
+#     address_prefix         = "0.0.0.0/0"
+#     next_hop_type          = "VirtualAppliance"
+#     next_hop_in_ip_address = azurerm_firewall.this.ip_configuration[0].private_ip_address
+#   }
+# }
 
-resource "azurerm_subnet_route_table_association" "agents_egress" {
-  subnet_id      = azurerm_subnet.agents_egress.id
-  route_table_id = azurerm_route_table.egress.id
-}
+# resource "azurerm_subnet_route_table_association" "agents_egress" {
+#   subnet_id      = azurerm_subnet.agents_egress.id
+#   route_table_id = azurerm_route_table.egress.id
+# }
 
-resource "azurerm_subnet_route_table_association" "container_apps" {
-  subnet_id      = azurerm_subnet.container_apps.id
-  route_table_id = azurerm_route_table.egress.id
-}
+# resource "azurerm_subnet_route_table_association" "container_apps" {
+#   subnet_id      = azurerm_subnet.container_apps.id
+#   route_table_id = azurerm_route_table.egress.id
+# }
 
-resource "azurerm_subnet_route_table_association" "build_agents" {
-  subnet_id      = azurerm_subnet.build_agents.id
-  route_table_id = azurerm_route_table.egress.id
-}
+# resource "azurerm_subnet_route_table_association" "build_agents" {
+#   subnet_id      = azurerm_subnet.build_agents.id
+#   route_table_id = azurerm_route_table.egress.id
+# }
 
 ###############################################################################
 # Private DNS zones (one per private-linked service) + VNet links

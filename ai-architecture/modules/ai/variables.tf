@@ -6,6 +6,10 @@ variable "location" {
   type = string
 }
 
+variable "search_location" {
+  type = string
+}
+
 variable "name_suffix" {
   type = string
 }

@@ -17,7 +17,7 @@ locals {
 ###############################################################################
 resource "azurerm_search_service" "this" {
   name                          = local.search_name
-  location                      = var.location
+  location                      = var.search_location
   resource_group_name           = var.resource_group_name
   sku                           = "standard"
   replica_count                 = 2

@@ -1,4 +1,5 @@
 location      = "eastus2"
+search_location = "eastus"
 workload_name = "foundryref"
 environment   = "prod"
 

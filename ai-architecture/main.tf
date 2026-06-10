@@ -76,6 +76,7 @@ module "ai" {
 
   resource_group_name         = azurerm_resource_group.this.name
   location                    = var.location
+  search_location             = var.search_location
   name_suffix                 = local.name_suffix
   random_suffix               = random_string.suffix.result
   private_endpoints_subnet_id = module.network.private_endpoints_subnet_id
@@ -134,4 +135,6 @@ module "apim" {
   foundry_inference_endpoint = module.ai.foundry_inference_endpoint
 
   tags = local.base_tags
+
+  depends_on = [module.network]
 }
