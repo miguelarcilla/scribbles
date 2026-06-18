@@ -22,6 +22,26 @@ resource "azurerm_container_app_environment" "this" {
   }
 }
 
+resource "azurerm_private_endpoint" "container_apps_environment" {
+  name                = "pep-cae-${var.name_suffix}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  subnet_id           = var.private_endpoints_subnet_id
+  tags                = var.tags
+
+  private_service_connection {
+    name                           = "psc-cae"
+    private_connection_resource_id = azurerm_container_app_environment.this.id
+    subresource_names              = ["managedEnvironments"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "cae-dns"
+    private_dns_zone_ids = [var.container_apps_environment_private_dns_zone_id]
+  }
+}
+
 resource "azurerm_container_app" "chat" {
   name                         = "ca-chatui-${var.name_suffix}"
   container_app_environment_id = azurerm_container_app_environment.this.id

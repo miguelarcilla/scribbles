@@ -102,6 +102,7 @@ module "ai" {
 module "application" {
   source = "./modules/application"
 
+<<<<<<< Updated upstream
   resource_group_name             = azurerm_resource_group.this.name
   location                        = var.location
   name_suffix                     = local.name_suffix
@@ -112,12 +113,33 @@ module "application" {
   container_registry_login_server = module.management.container_registry_login_server
   app_image_name                  = var.app_image_name
   app_image_tag                   = var.app_image_tag
+=======
+  resource_group_name                            = azurerm_resource_group.this.name
+  location                                       = var.location
+  name_suffix                                    = local.name_suffix
+  container_apps_subnet_id                       = module.network.container_apps_subnet_id
+  private_endpoints_subnet_id                    = module.network.private_endpoints_subnet_id
+  container_apps_environment_private_dns_zone_id = module.network.private_dns_zone_ids["container_apps"]
+  log_analytics_workspace_id                     = module.management.log_analytics_workspace_id
+  app_insights_connection_string                 = module.management.app_insights_connection_string
+>>>>>>> Stashed changes
 
   # The app talks to Foundry over the APIM gateway endpoint.
   ai_gateway_endpoint      = module.apim.gateway_url
   foundry_project_endpoint = module.ai.foundry_project_endpoint
 
   tags = local.base_tags
+}
+
+resource "azurerm_role_assignment" "container_app_openai_user" {
+  scope                = module.ai.foundry_account_id
+  role_definition_name = "Cognitive Services OpenAI User"
+  principal_id         = module.application.container_app_principal_id
+
+  depends_on = [
+    module.ai,
+    module.application,
+  ]
 }
 
 module "apim" {

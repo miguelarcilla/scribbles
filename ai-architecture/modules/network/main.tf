@@ -30,6 +30,7 @@ locals {
     openai            = "privatelink.openai.azure.com"
     aiservices        = "privatelink.services.ai.azure.com"
     search            = "privatelink.search.windows.net"
+    container_apps    = "privatelink.${replace(lower(var.location), " ", "")}.azurecontainerapps.io"
   }
 }
 
