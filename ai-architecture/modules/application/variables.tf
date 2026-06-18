@@ -31,12 +31,17 @@ variable "app_insights_connection_string" {
   sensitive = true
 }
 
-variable "ai_gateway_endpoint" {
+variable "azure_openai_endpoint" {
   type = string
 }
 
-variable "foundry_project_endpoint" {
+variable "azure_openai_deployment" {
   type = string
+}
+
+variable "azure_openai_api_version" {
+  type    = string
+  default = "2025-01-01-preview"
 }
 
 variable "container_registry_id" {

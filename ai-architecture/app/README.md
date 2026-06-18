@@ -50,7 +50,6 @@ docker build -t foundry-chat:latest .
    - `AZURE_OPENAI_ENDPOINT`
    - `AZURE_OPENAI_DEPLOYMENT`
    - `AZURE_OPENAI_API_VERSION`
-   - `SYSTEM_PROMPT` (optional)
 3. Assign the Container App managed identity the role:
    - `Cognitive Services OpenAI User`
 

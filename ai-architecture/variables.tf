@@ -82,3 +82,9 @@ variable "app_image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "azure_openai_api_version" {
+  description = "API version passed to the chat app for Azure OpenAI calls."
+  type        = string
+  default     = "2025-01-01-preview"
+}

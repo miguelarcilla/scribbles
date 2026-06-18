@@ -70,12 +70,16 @@ resource "azurerm_container_app" "chat" {
       memory = "1Gi"
 
       env {
-        name  = "AI_GATEWAY_ENDPOINT"
-        value = var.ai_gateway_endpoint
+        name  = "AZURE_OPENAI_ENDPOINT"
+        value = var.azure_openai_endpoint
       }
       env {
-        name  = "FOUNDRY_PROJECT_ENDPOINT"
-        value = var.foundry_project_endpoint
+        name  = "AZURE_OPENAI_DEPLOYMENT"
+        value = var.azure_openai_deployment
+      }
+      env {
+        name  = "AZURE_OPENAI_API_VERSION"
+        value = var.azure_openai_api_version
       }
       env {
         name        = "APPLICATIONINSIGHTS_CONNECTION_STRING"

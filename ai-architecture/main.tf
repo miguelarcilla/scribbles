@@ -115,9 +115,9 @@ module "application" {
   app_image_name                                 = var.app_image_name
   app_image_tag                                  = var.app_image_tag
 
-  # The app talks to Foundry over the APIM gateway endpoint.
-  ai_gateway_endpoint      = module.apim.gateway_url
-  foundry_project_endpoint = module.ai.foundry_project_endpoint
+  azure_openai_endpoint    = module.ai.foundry_inference_endpoint
+  azure_openai_deployment  = var.gpt_model.name
+  azure_openai_api_version = var.azure_openai_api_version
 
   tags = local.base_tags
 }
