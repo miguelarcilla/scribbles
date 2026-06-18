@@ -70,3 +70,15 @@ variable "publisher_email" {
   type        = string
   default     = "platform-team@contoso.example"
 }
+
+variable "app_image_name" {
+  description = "Container image repository name in ACR for the chat application."
+  type        = string
+  default     = "foundry-chat"
+}
+
+variable "app_image_tag" {
+  description = "Container image tag for the chat application image in ACR."
+  type        = string
+  default     = "latest"
+}

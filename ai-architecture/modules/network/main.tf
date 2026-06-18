@@ -30,6 +30,7 @@ locals {
     openai            = "privatelink.openai.azure.com"
     aiservices        = "privatelink.services.ai.azure.com"
     search            = "privatelink.search.windows.net"
+    container_apps    = "privatelink.${replace(lower(var.location), " ", "")}.azurecontainerapps.io"
   }
 }
 
@@ -46,10 +47,11 @@ resource "azurerm_virtual_network" "this" {
 ###############################################################################
 
 resource "azurerm_subnet" "container_apps" {
-  name                 = "ContainerAppsSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.container_apps]
+  name                            = "ContainerAppsSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.container_apps]
+  default_outbound_access_enabled = false
 
   delegation {
     name = "Microsoft.App.environments"
@@ -61,17 +63,19 @@ resource "azurerm_subnet" "container_apps" {
 }
 
 resource "azurerm_subnet" "apim" {
-  name                 = "ApiManagementSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.apim]
+  name                            = "ApiManagementSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.apim]
+  default_outbound_access_enabled = false
 }
 
 resource "azurerm_subnet" "agents_egress" {
-  name                 = "AgentsEgressSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.agents_egress]
+  name                            = "AgentsEgressSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.agents_egress]
+  default_outbound_access_enabled = false
 
   delegation {
     name = "Microsoft.App.environments"
@@ -88,41 +92,47 @@ resource "azurerm_subnet" "private_endpoints" {
   virtual_network_name              = azurerm_virtual_network.this.name
   address_prefixes                  = [local.subnet_prefixes.private_endpoints]
   private_endpoint_network_policies = "Enabled"
+  default_outbound_access_enabled   = false
 }
 
 resource "azurerm_subnet" "data" {
-  name                 = "DataSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.data]
+  name                            = "DataSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.data]
+  default_outbound_access_enabled = false
 }
 
 resource "azurerm_subnet" "firewall" {
-  name                 = "AzureFirewallSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.firewall]
+  name                            = "AzureFirewallSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.firewall]
+  default_outbound_access_enabled = false
 }
 
 resource "azurerm_subnet" "bastion" {
-  name                 = "AzureBastionSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.bastion]
+  name                            = "AzureBastionSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.bastion]
+  default_outbound_access_enabled = false
 }
 
 resource "azurerm_subnet" "jumpbox" {
-  name                 = "JumpboxSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.jumpbox]
+  name                            = "JumpboxSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.jumpbox]
+  default_outbound_access_enabled = false
 }
 
 resource "azurerm_subnet" "build_agents" {
-  name                 = "BuildAgentsSubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.name
-  address_prefixes     = [local.subnet_prefixes.build_agents]
+  name                            = "BuildAgentsSubnet"
+  resource_group_name             = var.resource_group_name
+  virtual_network_name            = azurerm_virtual_network.this.name
+  address_prefixes                = [local.subnet_prefixes.build_agents]
+  default_outbound_access_enabled = false
 }
 
 ###############################################################################
