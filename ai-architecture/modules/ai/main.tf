@@ -56,38 +56,26 @@ resource "azurerm_private_endpoint" "search" {
 # Network injection binds the Foundry Agent Service to the delegated egress
 # subnet so that agent traffic stays inside the virtual network.
 ###############################################################################
-resource "azapi_resource" "foundry" {
-  type      = "Microsoft.CognitiveServices/accounts@2025-06-01"
-  name      = local.foundry_account_name
-  location  = var.location
-  parent_id = "/subscriptions/${data.azurerm_client_config.current.subscription_id}/resourceGroups/${var.resource_group_name}"
-  tags      = var.tags
+resource "azurerm_cognitive_account" "foundry" {
+  name                = local.foundry_account_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  kind                = "AIServices"
+  sku_name            = "S0"
+  project_management_enabled = true
+  custom_subdomain_name      = local.foundry_account_name
+  public_network_access_enabled = false
+  local_auth_enabled            = false
+  tags                          = var.tags
 
   identity {
     type = "SystemAssigned"
   }
 
-  body = {
-    kind = "AIServices"
-    sku = {
-      name = "S0"
-    }
-    properties = {
-      allowProjectManagement = true
-      customSubDomainName    = local.foundry_account_name
-      publicNetworkAccess    = "Disabled"
-      disableLocalAuth       = true
-      networkInjections = [
-        {
-          scenario                   = "agent"
-          subnetArmId                = var.agents_egress_subnet_id
-          useMicrosoftManagedNetwork = false
-        }
-      ]
-    }
+  network_injection {
+    scenario  = "agent"
+    subnet_id = var.agents_egress_subnet_id
   }
-
-  response_export_values = ["identity.principalId", "properties.endpoint"]
 }
 
 resource "azurerm_private_endpoint" "foundry" {
@@ -99,7 +87,7 @@ resource "azurerm_private_endpoint" "foundry" {
 
   private_service_connection {
     name                           = "psc-foundry"
-    private_connection_resource_id = azapi_resource.foundry.id
+    private_connection_resource_id = azurerm_cognitive_account.foundry.id
     subresource_names              = ["account"]
     is_manual_connection           = false
   }
@@ -119,7 +107,7 @@ resource "azurerm_private_endpoint" "foundry" {
 ###############################################################################
 resource "azurerm_cognitive_deployment" "gpt" {
   name                 = var.gpt_model.name
-  cognitive_account_id = azapi_resource.foundry.id
+  cognitive_account_id = azurerm_cognitive_account.foundry.id
 
   model {
     format  = "OpenAI"
@@ -136,32 +124,24 @@ resource "azurerm_cognitive_deployment" "gpt" {
 ###############################################################################
 # Foundry project + bring-your-own dependency connections + capability host
 ###############################################################################
-resource "azapi_resource" "project" {
-  type      = "Microsoft.CognitiveServices/accounts/projects@2025-06-01"
-  name      = local.foundry_project_name
-  location  = var.location
-  parent_id = azapi_resource.foundry.id
-  tags      = var.tags
+resource "azurerm_cognitive_account_project" "project" {
+  name                 = local.foundry_project_name
+  cognitive_account_id = azurerm_cognitive_account.foundry.id
+  location             = var.location
+  display_name         = "Foundry baseline chat project"
+  description          = "Project hosting the prompt-based chat agent."
+  tags                 = var.tags
 
   identity {
     type = "SystemAssigned"
   }
-
-  body = {
-    properties = {
-      displayName = "Foundry baseline chat project"
-      description = "Project hosting the prompt-based chat agent."
-    }
-  }
-
-  response_export_values = ["identity.principalId"]
 }
 
 # Account-level connections to the BYO dependencies (AAD / managed identity auth).
 resource "azapi_resource" "conn_cosmos" {
   type      = "Microsoft.CognitiveServices/accounts/connections@2025-06-01"
   name      = "cosmosdb-connection"
-  parent_id = azapi_resource.foundry.id
+  parent_id = azurerm_cognitive_account.foundry.id
 
   body = {
     properties = {
@@ -180,7 +160,7 @@ resource "azapi_resource" "conn_cosmos" {
 resource "azapi_resource" "conn_storage" {
   type      = "Microsoft.CognitiveServices/accounts/connections@2025-06-01"
   name      = "storage-connection"
-  parent_id = azapi_resource.foundry.id
+  parent_id = azurerm_cognitive_account.foundry.id
 
   body = {
     properties = {
@@ -199,7 +179,7 @@ resource "azapi_resource" "conn_storage" {
 resource "azapi_resource" "conn_search" {
   type      = "Microsoft.CognitiveServices/accounts/connections@2025-06-01"
   name      = "search-connection"
-  parent_id = azapi_resource.foundry.id
+  parent_id = azurerm_cognitive_account.foundry.id
 
   body = {
     properties = {
@@ -220,7 +200,7 @@ resource "azapi_resource" "conn_search" {
 resource "azapi_resource" "project_capability_host" {
   type      = "Microsoft.CognitiveServices/accounts/projects/capabilityHosts@2025-06-01"
   name      = "agents-capabilityhost"
-  parent_id = azapi_resource.project.id
+  parent_id = azurerm_cognitive_account_project.project.id
 
   schema_validation_enabled = false
 
@@ -245,7 +225,7 @@ resource "azapi_resource" "project_capability_host" {
 # Role assignments - project managed identity -> BYO dependencies (data plane)
 ###############################################################################
 locals {
-  project_principal_id = azapi_resource.project.output.identity.principalId
+  project_principal_id = azurerm_cognitive_account_project.project.identity[0].principal_id
 }
 
 resource "azurerm_role_assignment" "project_storage_blob" {
@@ -276,7 +256,7 @@ resource "azurerm_role_assignment" "project_search_service" {
 resource "azurerm_role_assignment" "foundry_search_reader" {
   scope                = azurerm_search_service.this.id
   role_definition_name = "Search Index Data Reader"
-  principal_id         = azapi_resource.foundry.output.identity.principalId
+  principal_id         = azurerm_cognitive_account.foundry.identity[0].principal_id
 }
 
 ###############################################################################
@@ -284,7 +264,7 @@ resource "azurerm_role_assignment" "foundry_search_reader" {
 ###############################################################################
 resource "azurerm_monitor_diagnostic_setting" "foundry" {
   name                       = "diag-foundry"
-  target_resource_id         = azapi_resource.foundry.id
+  target_resource_id         = azurerm_cognitive_account.foundry.id
   log_analytics_workspace_id = var.log_analytics_workspace_id
 
   enabled_log {

@@ -1,7 +1,5 @@
-data "azurerm_client_config" "current" {}
-
 output "foundry_account_id" {
-  value = azapi_resource.foundry.id
+  value = azurerm_cognitive_account.foundry.id
 }
 
 output "foundry_account_name" {
