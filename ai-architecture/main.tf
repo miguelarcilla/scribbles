@@ -71,6 +71,35 @@ module "data" {
   tags = local.base_tags
 }
 
+module "jumpbox" {
+  source = "./modules/jumpbox"
+
+  resource_group_name = azurerm_resource_group.this.name
+  location            = var.location
+  name_suffix         = local.name_suffix
+
+  jumpbox_subnet_id = module.network.jumpbox_subnet_id
+  virtual_network_id = module.network.vnet_id
+
+  admin_username = var.jumpbox_admin_username
+  admin_password = var.jumpbox_admin_password
+
+  vm_size      = var.jumpbox_vm_size
+  license_type = var.jumpbox_license_type
+
+  os_disk_storage_account_type = var.jumpbox_os_disk_storage_account_type
+  os_disk_size_gb              = var.jumpbox_os_disk_size_gb
+
+  image_reference = {
+    publisher = var.jumpbox_image_publisher
+    offer     = var.jumpbox_image_offer
+    sku       = var.jumpbox_image_sku
+    version   = var.jumpbox_image_version
+  }
+
+  tags = local.base_tags
+}
+
 module "ai" {
   source = "./modules/ai"
 

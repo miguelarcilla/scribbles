@@ -38,6 +38,21 @@ output "container_registry_login_server" {
   value       = module.management.container_registry_login_server
 }
 
+output "jumpbox_vm_id" {
+  description = "Resource ID of the jumpbox VM."
+  value       = module.jumpbox.jumpbox_vm_id
+}
+
+output "jumpbox_private_ip" {
+  description = "Private IP address of the jumpbox VM."
+  value       = module.jumpbox.jumpbox_private_ip
+}
+
+output "bastion_id" {
+  description = "Resource ID of the Bastion Developer host."
+  value       = module.jumpbox.bastion_id
+}
+
 output "key_vault_uri" {
   description = "Key Vault URI for the workload secrets."
   value       = module.management.key_vault_uri
