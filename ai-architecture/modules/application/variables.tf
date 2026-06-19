@@ -48,6 +48,10 @@ variable "container_registry_id" {
   type = string
 }
 
+variable "foundry_account_id" {
+  type = string
+}
+
 variable "container_registry_login_server" {
   type = string
 }

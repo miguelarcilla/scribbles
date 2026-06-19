@@ -118,3 +118,12 @@ resource "azurerm_role_assignment" "chat_acr_pull" {
   # Role assignment can race with AAD propagation for just-created identities.
   skip_service_principal_aad_check = true
 }
+
+resource "azurerm_role_assignment" "container_app_openai_user" {
+  scope                = var.foundry_account_id
+  role_definition_name = "Cognitive Services OpenAI User"
+  principal_id         = azurerm_container_app.chat.identity[0].principal_id
+
+  # Role assignment can race with AAD propagation for just-created identities.
+  skip_service_principal_aad_check = true
+}
