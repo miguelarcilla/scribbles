@@ -66,7 +66,11 @@ try {
 
     # Create prerequisite Azure resources (resource group, container registry, etc.)
     Write-Step "Creating prerequisite infrastructure (including ACR)"
-    Invoke-TerraformApply -ExtraArgs @("-target=module.management")
+    Invoke-TerraformApply -ExtraArgs @(
+        "-target=module.network", 
+        "-target=module.management", 
+        "-target=module.data", 
+        "-target=module.ai")
 
     # Retrieve Azure Container Registry details from Terraform outputs
     Write-Step "Reading ACR outputs"
@@ -80,7 +84,7 @@ try {
 
     # Build the Docker image from the app directory
     Write-Step "Building container image"
-    docker build -t $imageRef $appDir
+    docker build --platform linux/amd64 -t $imageRef $appDir
 
     # Push the built image to Azure Container Registry
     Write-Step "Pushing container image"
