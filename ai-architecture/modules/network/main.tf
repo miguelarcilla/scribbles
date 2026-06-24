@@ -67,7 +67,9 @@ resource "azurerm_subnet" "apim" {
   resource_group_name             = var.resource_group_name
   virtual_network_name            = azurerm_virtual_network.this.name
   address_prefixes                = [local.subnet_prefixes.apim]
-  default_outbound_access_enabled = false
+  # APIM control plane depends on outbound internet reachability for return
+  # traffic when validating management endpoint connectivity (port 3443).
+  default_outbound_access_enabled = true
 }
 
 resource "azurerm_subnet" "agents_egress" {
