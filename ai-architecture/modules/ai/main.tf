@@ -20,7 +20,7 @@ resource "azurerm_search_service" "this" {
   location                      = var.search_location
   resource_group_name           = var.resource_group_name
   sku                           = "standard"
-  replica_count                 = 2
+  replica_count                 = 1
   partition_count               = 1
   public_network_access_enabled = false
   local_authentication_enabled  = false
@@ -78,6 +78,13 @@ resource "azurerm_cognitive_account" "foundry" {
   }
 }
 
+# Foundry account can remain in Accepted briefly after create. Delay dependent
+# control-plane operations to avoid transient 400 AccountProvisioningStateInvalid.
+resource "time_sleep" "wait_for_foundry_ready" {
+  depends_on      = [azurerm_cognitive_account.foundry]
+  create_duration = "120s"
+}
+
 resource "azurerm_private_endpoint" "foundry" {
   name                = "pep-foundry-${var.name_suffix}"
   location            = var.location
@@ -100,6 +107,8 @@ resource "azurerm_private_endpoint" "foundry" {
       var.private_dns_zone_ids.aiservices,
     ]
   }
+
+  depends_on = [time_sleep.wait_for_foundry_ready]
 }
 
 ###############################################################################
@@ -165,7 +174,7 @@ resource "azapi_resource" "conn_storage" {
   body = {
     properties = {
       category      = "AzureStorageAccount"
-      target        = var.storage_account_id
+      target        = var.storage_blob_endpoint
       authType      = "AAD"
       isSharedToAll = true
       metadata = {

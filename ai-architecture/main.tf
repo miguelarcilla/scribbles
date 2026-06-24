@@ -106,8 +106,9 @@ module "ai" {
   gpt_model = var.gpt_model
 
   # Bring-your-own Foundry Agent Service dependencies.
-  storage_account_id  = module.data.storage_account_id
-  cosmosdb_account_id = module.data.cosmosdb_account_id
+  storage_account_id    = module.data.storage_account_id
+  storage_blob_endpoint = module.data.storage_blob_endpoint
+  cosmosdb_account_id   = module.data.cosmosdb_account_id
 
   private_dns_zone_ids = {
     cognitiveservices = module.network.private_dns_zone_ids["cognitiveservices"]
