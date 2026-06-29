@@ -52,6 +52,26 @@ module "management" {
   tenant_id                   = data.azurerm_client_config.current.tenant_id
   private_endpoints_subnet_id = module.network.private_endpoints_subnet_id
   keyvault_dns_zone_id        = module.network.private_dns_zone_ids["vault"]
+
+  jumpbox_subnet_id = module.network.jumpbox_subnet_id
+  virtual_network_id = module.network.vnet_id
+
+  jumpbox_admin_username = var.jumpbox_admin_username
+  jumpbox_admin_password = var.jumpbox_admin_password
+
+  jumpbox_vm_size      = var.jumpbox_vm_size
+  jumpbox_license_type = var.jumpbox_license_type
+
+  jumpbox_os_disk_storage_account_type = var.jumpbox_os_disk_storage_account_type
+  jumpbox_os_disk_size_gb              = var.jumpbox_os_disk_size_gb
+
+  jumpbox_image_reference = {
+    publisher = var.jumpbox_image_publisher
+    offer     = var.jumpbox_image_offer
+    sku       = var.jumpbox_image_sku
+    version   = var.jumpbox_image_version
+  }
+
   tags                        = local.base_tags
 }
 
@@ -86,8 +106,9 @@ module "ai" {
   gpt_model = var.gpt_model
 
   # Bring-your-own Foundry Agent Service dependencies.
-  storage_account_id  = module.data.storage_account_id
-  cosmosdb_account_id = module.data.cosmosdb_account_id
+  storage_account_id    = module.data.storage_account_id
+  storage_blob_endpoint = module.data.storage_blob_endpoint
+  cosmosdb_account_id   = module.data.cosmosdb_account_id
 
   private_dns_zone_ids = {
     cognitiveservices = module.network.private_dns_zone_ids["cognitiveservices"]
@@ -114,23 +135,13 @@ module "application" {
   container_registry_login_server                = module.management.container_registry_login_server
   app_image_name                                 = var.app_image_name
   app_image_tag                                  = var.app_image_tag
+  foundry_account_id                             = module.ai.foundry_account_id
 
-  # The app talks to Foundry over the APIM gateway endpoint.
-  ai_gateway_endpoint      = module.apim.gateway_url
-  foundry_project_endpoint = module.ai.foundry_project_endpoint
+  azure_openai_endpoint    = module.ai.foundry_inference_endpoint
+  azure_openai_deployment  = var.gpt_model.name
+  azure_openai_api_version = var.azure_openai_api_version
 
   tags = local.base_tags
-}
-
-resource "azurerm_role_assignment" "container_app_openai_user" {
-  scope                = module.ai.foundry_account_id
-  role_definition_name = "Cognitive Services OpenAI User"
-  principal_id         = module.application.container_app_principal_id
-
-  depends_on = [
-    module.ai,
-    module.application,
-  ]
 }
 
 module "apim" {

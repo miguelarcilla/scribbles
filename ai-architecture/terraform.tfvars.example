@@ -15,6 +15,20 @@ gpt_model = {
 publisher_name  = "Contoso AI Platform"
 publisher_email = "platform-team@contoso.example"
 
+# Jumpbox VM settings
+jumpbox_admin_username = "azureuser"
+jumpbox_admin_password = "REPLACE_WITH_A_STRONG_PASSWORD"
+
+jumpbox_vm_size                     = "Standard_D4s_v5"
+jumpbox_license_type                = "Windows_Client"
+jumpbox_os_disk_storage_account_type = "Premium_LRS"
+jumpbox_os_disk_size_gb             = 127
+
+jumpbox_image_publisher = "microsoftwindowsdesktop"
+jumpbox_image_offer     = "windows-11"
+jumpbox_image_sku       = "win11-25h2-ent"
+jumpbox_image_version   = "latest"
+
 tags = {
   workload   = "microsoft-foundry-baseline"
   iac        = "terraform"
