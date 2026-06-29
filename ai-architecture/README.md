@@ -51,9 +51,53 @@ See [`diagrams/architecture.mmd`](./diagrams/architecture.mmd) for the Mermaid d
 > `192.168.0.0/16` is used because the Foundry Agent Service delegated subnet historically
 > rejected the `10.0.0.0/8` range.
 
+## Requirements
+
+**Local tools:**
+- **PowerShell** 5.0+ (Windows) or **PowerShell Core** 7.0+ (cross-platform)
+- **Terraform** >= 1.6
+- **Docker** (for building container images; required for `deploy-app.ps1`)
+- **Python** 3.11+ (for running or developing the chat app locally)
+- **Azure CLI** (`az` command, with login: `az login`)
+
+**Terraform providers:**
+- `hashicorp/azurerm` ~> 4.20
+- `Azure/azapi` ~> 2.2
+- `hashicorp/random`
+
+**Azure permissions:**
+- Authenticated Azure context with rights to create resources and role assignments (Foundry, ACR, Container Apps, Key Vault, RBAC).
+
 ## Usage
 
-```bash
+### Quick start: One-command deployment
+
+**Recommended:** Use the `deploy-app.ps1` script for a full build-and-deploy in one step:
+
+```powershell
+cd ai-architecture
+./deploy-app.ps1 -ImageName foundry-chat -ImageTag latest -AutoApprove
+```
+
+This script:
+1. Creates prerequisite infrastructure (including Azure Container Registry)
+2. Builds and pushes the chat app Docker image
+3. Applies the full Terraform stack
+
+**Optional flags:**
+- `-SubscriptionId <guid-or-name>` — target a specific subscription
+- `-AutoApprove` — skip Terraform confirmation prompts
+
+**Example with all options:**
+```powershell
+./deploy-app.ps1 -ImageName foundry-chat -ImageTag v1 -SubscriptionId mysubscription -AutoApprove
+```
+
+### Manual step-by-step deployment
+
+If you prefer fine-grained control:
+
+```powershell
 cd ai-architecture
 cp terraform.tfvars.example terraform.tfvars   # edit values
 terraform init
@@ -61,33 +105,7 @@ terraform plan
 terraform apply
 ```
 
-### One-command app deploy (build/push/apply)
-
-For the chat app under `app/`, you can run a staged deployment that:
-1. Creates prerequisite infra (including ACR),
-2. Builds and pushes the app image,
-3. Applies the full Terraform stack.
-
-```powershell
-cd ai-architecture
-./deploy-app.ps1 -ImageName foundry-chat -ImageTag latest
-```
-
-Optional flags:
-- `-SubscriptionId <subscription-guid-or-name>`
-- `-AutoApprove`
-
-Example:
-
-```powershell
-./deploy-app.ps1 -ImageName foundry-chat -ImageTag v1 -AutoApprove
-```
-
-### Requirements
-
-- Terraform >= 1.6
-- Providers: `hashicorp/azurerm` ~> 4.20, `Azure/azapi` ~> 2.2, `hashicorp/random`
-- An authenticated Azure context (`az login`) with rights to create the resources and role assignments.
+Then build and push the app image separately using Docker and Azure Container Registry commands.
 
 ### Key variables
 

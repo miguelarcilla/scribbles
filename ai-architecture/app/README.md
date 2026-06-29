@@ -2,59 +2,60 @@
 
 A minimal single-page chat app that talks to an OpenAI model hosted on Microsoft Foundry.
 
-## What this includes
+## What's included
 
-- Single-page frontend: `templates/index.html` + `static/app.js`
-- Small Flask backend: `server.py`
-- Secure auth pattern: backend uses Azure AD token via `DefaultAzureCredential`
-- Dockerfile for Azure Container Apps deployment
+- **Frontend**: Single-page app in `templates/index.html` + `static/app.js`
+- **Backend**: Flask server in `server.py` (lightweight REST API)
+- **Security**: Azure AD authentication via `DefaultAzureCredential` (backend only; browser never sees credentials)
+- **Containerization**: `Dockerfile` for Azure Container Apps deployment
 
-## Prerequisites
+## Local development
 
-1. Python 3.11+
-2. Azure CLI login (`az login`)
-3. Access to your Foundry/OpenAI deployment
+### Prerequisites
+- Python 3.11+
+- Azure CLI (`az login`)
+- Access to a Foundry model deployment
 
-## Configure
-
-1. Copy `.env.sample` to `.env`
-2. Update values as needed:
-   - `AZURE_OPENAI_ENDPOINT`
-   - `AZURE_OPENAI_DEPLOYMENT`
-   - `AZURE_OPENAI_API_VERSION`
-
-## Run locally
+### Setup and run
 
 ```powershell
-cd c:\Code\scribbles\ai-architecture\app
+cd app
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-Get-Content .env.sample | Set-Content .env
+cp .env.sample .env           # edit with your Foundry endpoint/deployment
 python server.py
 ```
 
-Open http://localhost:50505
+Open `http://localhost:50505` in your browser.
 
-## Build container
+### Environment variables
 
+Update `.env` with:
+- `AZURE_OPENAI_ENDPOINT` — your Foundry instance endpoint
+- `AZURE_OPENAI_DEPLOYMENT` — model deployment name
+- `AZURE_OPENAI_API_VERSION` — API version (e.g., `2024-08-01-preview`)
+
+## Deployment to Azure
+
+**See the [main README](../README.md) for full deployment instructions.**
+
+For a one-command build-and-deploy:
 ```powershell
-cd c:\Code\scribbles\ai-architecture\app
-docker build -t foundry-chat:latest .
+cd ..
+./deploy-app.ps1 -ImageName foundry-chat -ImageTag latest -AutoApprove
 ```
 
-## Deploy to Azure Container Apps
+To deploy manually:
+1. Build the Docker image: `docker build -t foundry-chat:latest .`
+2. Push to Azure Container Registry
+3. Create a Container App with the image
+4. Set the environment variables above on the Container App
+5. Assign the Container App's managed identity the role `Cognitive Services OpenAI User`
 
-1. Push the image to your ACR.
-2. Set these environment variables on the container app:
-   - `AZURE_OPENAI_ENDPOINT`
-   - `AZURE_OPENAI_DEPLOYMENT`
-   - `AZURE_OPENAI_API_VERSION`
-3. Assign the Container App managed identity the role:
-   - `Cognitive Services OpenAI User`
+## How it works
 
-## Notes
-
-- The browser never receives credentials.
-- If running in Azure Container Apps with managed identity, this app will use it automatically.
-- For local development, `DefaultAzureCredential` uses your signed-in Azure CLI context.
+- Browser calls Flask endpoints (no credentials exposed)
+- Flask uses `DefaultAzureCredential` to authenticate to Foundry
+- In Azure Container Apps with managed identity, authentication is automatic
+- For local dev, `DefaultAzureCredential` uses your `az login` context
