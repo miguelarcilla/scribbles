@@ -31,10 +31,29 @@ Open `http://localhost:50505` in your browser.
 
 ### Environment variables
 
-Update `.env` with:
-- `AZURE_OPENAI_ENDPOINT` — your Foundry instance endpoint
-- `AZURE_OPENAI_DEPLOYMENT` — model deployment name
-- `AZURE_OPENAI_API_VERSION` — API version (e.g., `2024-08-01-preview`)
+The app supports two routing modes. Choose one:
+
+#### Option 1: Direct Foundry endpoint (default)
+```
+AZURE_OPENAI_ENDPOINT=https://epsasia-newsletter-agent-foundry.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT=gpt-5.4
+AZURE_OPENAI_API_VERSION=2025-01-01-preview
+```
+
+#### Option 2: API Management gateway
+If you have APIM deployed (recommended for production), set:
+```
+AZURE_APIM_ENDPOINT=https://apim-instance.azure-api.net/foundry
+AZURE_APIM_SUBSCRIPTION_KEY=your-subscription-key-here   # optional; uses managed identity if empty
+AZURE_OPENAI_DEPLOYMENT=gpt-5.4
+AZURE_OPENAI_API_VERSION=2025-01-01-preview
+```
+
+When `AZURE_APIM_ENDPOINT` is set, it takes precedence and routes through API Management. Choose authentication:
+- **Subscription key** (simple, for testing): set `AZURE_APIM_SUBSCRIPTION_KEY`
+- **Managed identity** (production): leave `AZURE_APIM_SUBSCRIPTION_KEY` empty; uses `DefaultAzureCredential`
+
+See [.env.sample](.env.sample) for a template with both options.
 
 ## Deployment to Azure
 
@@ -55,7 +74,17 @@ To deploy manually:
 
 ## How it works
 
-- Browser calls Flask endpoints (no credentials exposed)
-- Flask uses `DefaultAzureCredential` to authenticate to Foundry
-- In Azure Container Apps with managed identity, authentication is automatic
-- For local dev, `DefaultAzureCredential` uses your `az login` context
+**Routing logic:**
+- If `AZURE_APIM_ENDPOINT` is configured, requests route through **API Management** (with either subscription key or managed identity auth)
+- Otherwise, requests go directly to **Foundry** (with managed identity via `DefaultAzureCredential`)
+
+**Authentication:**
+- **Direct Foundry**: Flask uses `DefaultAzureCredential` to get a Cognitive Services token with scope `https://cognitiveservices.azure.com/.default`
+- **APIM + Subscription Key**: Flask includes the subscription key in request headers; no managed identity required
+- **APIM + Managed Identity** (recommended): Flask uses `DefaultAzureCredential` to get a management token with scope `https://management.azure.com/.default`; Container App identity is automatically granted `Cognitive Services OpenAI User` role on APIM during infrastructure deployment
+
+**Frontend:**
+- Browser calls Flask endpoints (no credentials exposed to browser)
+- Flask proxies all auth headers—browser never sees credentials
+- In Azure Container Apps with managed identity, authentication is fully automatic
+- The infrastructure automatically configures all necessary RBAC role assignments

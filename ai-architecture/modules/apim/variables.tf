@@ -43,6 +43,12 @@ variable "foundry_inference_endpoint" {
   type = string
 }
 
+variable "foundry_api_version" {
+  type        = string
+  default     = "2024-08-01-preview"
+  description = "Azure OpenAI API version to expose through APIM"
+}
+
 variable "tags" {
   type = map(string)
 }

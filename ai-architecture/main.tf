@@ -136,12 +136,15 @@ module "application" {
   app_image_name                                 = var.app_image_name
   app_image_tag                                  = var.app_image_tag
   foundry_account_id                             = module.ai.foundry_account_id
+  apim_id                                        = module.apim.apim_id
 
   azure_openai_endpoint    = module.ai.foundry_inference_endpoint
   azure_openai_deployment  = var.gpt_model.name
   azure_openai_api_version = var.azure_openai_api_version
 
   tags = local.base_tags
+
+  depends_on = [module.apim]
 }
 
 module "apim" {
@@ -161,6 +164,7 @@ module "apim" {
   # Backends to load balance across (Foundry / OpenAI inference endpoints).
   foundry_account_id         = module.ai.foundry_account_id
   foundry_inference_endpoint = module.ai.foundry_inference_endpoint
+  foundry_api_version        = var.azure_openai_api_version
 
   tags = local.base_tags
 

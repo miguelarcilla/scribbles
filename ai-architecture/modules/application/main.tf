@@ -65,6 +65,14 @@ resource "azurerm_role_assignment" "container_app_openai_user" {
   skip_service_principal_aad_check = true
 }
 
+resource "azurerm_role_assignment" "container_app_apim_access" {
+  scope                = var.apim_id
+  role_definition_name = "Cognitive Services OpenAI User"
+  principal_id         = azurerm_user_assigned_identity.chat.principal_id
+
+  skip_service_principal_aad_check = true
+}
+
 resource "azurerm_container_app" "chat" {
   name                         = "ca-chatui-${var.name_suffix}"
   container_app_environment_id = azurerm_container_app_environment.this.id

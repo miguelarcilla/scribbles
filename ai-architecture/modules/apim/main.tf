@@ -36,47 +36,134 @@ resource "azurerm_role_assignment" "apim_openai_user" {
   principal_id         = azurerm_api_management.this.identity[0].principal_id
 }
 
-# Named backends representing the Foundry inference instances to balance across.
-# In a multi-region / multi-instance design each backend targets a different
-# Foundry account; here they illustrate the round-robin pool topology.
-resource "azurerm_api_management_backend" "foundry" {
-  for_each = toset(["foundry-1", "foundry-2"])
+###############################################################################
+# Named Values - Configuration for Foundry API integration
+###############################################################################
 
-  name                = each.value
+resource "azurerm_api_management_named_value" "foundry_api_version" {
+  name                = "FoundryApiVersion"
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  display_name        = "Foundry-API-Version"
+  value               = var.foundry_api_version
+}
+
+resource "azurerm_api_management_named_value" "foundry_endpoint_base" {
+  name                = "FoundryEndpointBase"
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  display_name        = "Foundry-Endpoint-Base-URL"
+  value               = trimsuffix(var.foundry_inference_endpoint, "/")
+  secret              = false
+}
+
+###############################################################################
+# Backends - Foundry inference instances for load balancing
+###############################################################################
+
+resource "azurerm_api_management_backend" "foundry_primary" {
+  name                = "foundry-primary"
   resource_group_name = var.resource_group_name
   api_management_name = azurerm_api_management.this.name
   protocol            = "http"
   url                 = "${trimsuffix(var.foundry_inference_endpoint, "/")}/openai"
+
+  description = "Primary Foundry inference backend"
 }
 
-# OpenAI-compatible API surface exposed to consumers.
-resource "azurerm_api_management_api" "openai" {
+resource "azurerm_api_management_backend" "foundry_secondary" {
+  name                = "foundry-secondary"
+  resource_group_name = var.resource_group_name
+  api_management_name = azurerm_api_management.this.name
+  protocol            = "http"
+  url                 = "${trimsuffix(var.foundry_inference_endpoint, "/")}/openai"
+
+  description = "Secondary Foundry inference backend (same endpoint for resilience)"
+}
+
+###############################################################################
+# Azure OpenAI API - Imported from Foundry resource
+###############################################################################
+
+resource "azurerm_api_management_api" "azure_openai" {
   name                  = "azure-openai"
   resource_group_name   = var.resource_group_name
   api_management_name   = azurerm_api_management.this.name
   revision              = "1"
-  display_name          = "Azure OpenAI (Foundry)"
+  display_name          = "Azure OpenAI (via Foundry)"
   path                  = "openai"
   protocols             = ["https"]
   subscription_required = true
   service_url           = "${trimsuffix(var.foundry_inference_endpoint, "/")}/openai"
+  description           = "Azure OpenAI API surface proxied through Foundry with managed identity authentication"
+
+  depends_on = [
+    azurerm_api_management_backend.foundry_primary,
+    azurerm_api_management_backend.foundry_secondary,
+  ]
 }
 
-# Catch-all operation so all OpenAI routes flow through the load-balancing policy.
-resource "azurerm_api_management_api_operation" "passthrough" {
-  operation_id        = "passthrough"
-  api_name            = azurerm_api_management_api.openai.name
+###############################################################################
+# API Operations - Core Azure OpenAI endpoints
+###############################################################################
+
+# Chat Completions endpoint
+resource "azurerm_api_management_api_operation" "chat_completions" {
+  operation_id        = "CreateChatCompletion"
+  api_name            = azurerm_api_management_api.azure_openai.name
   api_management_name = azurerm_api_management.this.name
   resource_group_name = var.resource_group_name
-  display_name        = "OpenAI passthrough"
+  display_name        = "Create Chat Completion"
   method              = "POST"
-  url_template        = "/*"
-  description         = "Routes all Azure OpenAI requests to the Foundry backend pool."
+  url_template        = "/deployments/{deployment-id}/chat/completions"
+  description         = "Creates a chat completion for the provided prompt and parameters."
+
+  template_parameter {
+    name        = "deployment-id"
+    description = "Deployment ID of the model"
+    required    = true
+    type        = "string"
+  }
 }
 
-# Round-robin load balancing + managed identity auth + retry on failure.
-resource "azurerm_api_management_api_policy" "openai" {
-  api_name            = azurerm_api_management_api.openai.name
+# Embeddings endpoint
+resource "azurerm_api_management_api_operation" "embeddings" {
+  operation_id        = "CreateEmbedding"
+  api_name            = azurerm_api_management_api.azure_openai.name
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  display_name        = "Create Embeddings"
+  method              = "POST"
+  url_template        = "/deployments/{deployment-id}/embeddings"
+  description         = "Creates an embedding vector representing the input text."
+
+  template_parameter {
+    name        = "deployment-id"
+    description = "Deployment ID of the embedding model"
+    required    = true
+    type        = "string"
+  }
+}
+
+# List Models endpoint
+resource "azurerm_api_management_api_operation" "list_models" {
+  operation_id        = "ListModels"
+  api_name            = azurerm_api_management_api.azure_openai.name
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  display_name        = "List Available Models"
+  method              = "GET"
+  url_template        = "/models"
+  description         = "Lists the currently available models and their details."
+}
+
+###############################################################################
+# API Policies - Global and operation-specific routing
+###############################################################################
+
+# Global API policy with managed identity authentication and load balancing
+resource "azurerm_api_management_api_policy" "azure_openai_global" {
+  api_name            = azurerm_api_management_api.azure_openai.name
   api_management_name = azurerm_api_management.this.name
   resource_group_name = var.resource_group_name
 
@@ -89,18 +176,19 @@ resource "azurerm_api_management_api_policy" "openai" {
     <set-header name="Authorization" exists-action="override">
       <value>@("Bearer " + (string)context.Variables["msi-access-token"])</value>
     </set-header>
-    <!-- Static round-robin selection across the backend pool. -->
-    <set-variable name="backendIndex" value="@(new Random().Next(1, 3))" />
+    <!-- Round-robin load balancing between Foundry backends. -->
+    <set-variable name="backendIndex" value="@(new Random().Next(0, 2))" />
     <choose>
-      <when condition="@(context.Variables.GetValueOrDefault<int>("backendIndex") == 1)">
-        <set-backend-service backend-id="foundry-1" />
+      <when condition="@(context.Variables.GetValueOrDefault<int>("backendIndex") == 0)">
+        <set-backend-service backend-id="foundry-primary" />
       </when>
       <otherwise>
-        <set-backend-service backend-id="foundry-2" />
+        <set-backend-service backend-id="foundry-secondary" />
       </otherwise>
     </choose>
   </inbound>
   <backend>
+    <!-- Retry on throttle (429) or server errors (5xx). -->
     <retry condition="@(context.Response != null &amp;&amp; (context.Response.StatusCode == 429 || context.Response.StatusCode >= 500))" count="2" interval="1" first-fast-retry="true">
       <forward-request buffer-request-body="true" />
     </retry>
@@ -115,9 +203,35 @@ resource "azurerm_api_management_api_policy" "openai" {
 XML
 
   depends_on = [
-    azurerm_api_management_backend.foundry,
-    azurerm_api_management_api_operation.passthrough,
+    azurerm_api_management_api_operation.chat_completions,
+    azurerm_api_management_api_operation.embeddings,
+    azurerm_api_management_api_operation.list_models,
   ]
+}
+
+# Operation policy for chat completions - specific request/response handling
+resource "azurerm_api_management_api_operation_policy" "chat_completions_policy" {
+  api_name            = azurerm_api_management_api.azure_openai.name
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = var.resource_group_name
+  operation_id        = azurerm_api_management_api_operation.chat_completions.operation_id
+
+  xml_content = <<XML
+<policies>
+  <inbound>
+    <base />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>
+XML
 }
 
 ###############################################################################

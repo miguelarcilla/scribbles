@@ -13,6 +13,16 @@ output "apim_gateway_url" {
   value       = module.apim.gateway_url
 }
 
+output "azure_openai_api_endpoint" {
+  description = "Azure OpenAI API endpoint through APIM (base path for all operations)."
+  value       = module.apim.azure_openai_api_url
+}
+
+output "azure_openai_chat_completions_endpoint" {
+  description = "Chat Completions endpoint URL through APIM (replace {deployment-id} with your model deployment)."
+  value       = module.apim.azure_openai_chat_completions_url
+}
+
 output "foundry_account_name" {
   description = "Microsoft Foundry account name."
   value       = module.ai.foundry_account_name

@@ -52,6 +52,11 @@ variable "foundry_account_id" {
   type = string
 }
 
+variable "apim_id" {
+  type        = string
+  description = "Resource ID of API Management for managed identity authorization."
+}
+
 variable "container_registry_login_server" {
   type = string
 }
