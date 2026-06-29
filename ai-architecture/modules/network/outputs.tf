@@ -26,6 +26,10 @@ output "data_subnet_id" {
   value = azurerm_subnet.data.id
 }
 
+output "jumpbox_subnet_id" {
+  value = azurerm_subnet.jumpbox.id
+}
+
 # output "firewall_private_ip" {
 #   value = azurerm_firewall.this.ip_configuration[0].private_ip_address
 # }

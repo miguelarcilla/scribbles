@@ -42,6 +42,29 @@ resource "azurerm_private_endpoint" "container_apps_environment" {
   }
 }
 
+resource "azurerm_user_assigned_identity" "chat" {
+  name                = "id-ca-chatui-${var.name_suffix}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  tags                = var.tags
+}
+
+resource "azurerm_role_assignment" "chat_acr_pull" {
+  scope                = var.container_registry_id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_user_assigned_identity.chat.principal_id
+
+  skip_service_principal_aad_check = true
+}
+
+resource "azurerm_role_assignment" "container_app_openai_user" {
+  scope                = var.foundry_account_id
+  role_definition_name = "Cognitive Services OpenAI User"
+  principal_id         = azurerm_user_assigned_identity.chat.principal_id
+
+  skip_service_principal_aad_check = true
+}
+
 resource "azurerm_container_app" "chat" {
   name                         = "ca-chatui-${var.name_suffix}"
   container_app_environment_id = azurerm_container_app_environment.this.id
@@ -51,12 +74,13 @@ resource "azurerm_container_app" "chat" {
   tags                         = var.tags
 
   identity {
-    type = "SystemAssigned"
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.chat.id]
   }
 
   registry {
     server   = var.container_registry_login_server
-    identity = "System"
+    identity = azurerm_user_assigned_identity.chat.id
   }
 
   template {
@@ -70,12 +94,20 @@ resource "azurerm_container_app" "chat" {
       memory = "1Gi"
 
       env {
-        name  = "AI_GATEWAY_ENDPOINT"
-        value = var.ai_gateway_endpoint
+        name  = "AZURE_OPENAI_ENDPOINT"
+        value = var.azure_openai_endpoint
       }
       env {
-        name  = "FOUNDRY_PROJECT_ENDPOINT"
-        value = var.foundry_project_endpoint
+        name  = "AZURE_OPENAI_DEPLOYMENT"
+        value = var.azure_openai_deployment
+      }
+      env {
+        name  = "AZURE_OPENAI_API_VERSION"
+        value = var.azure_openai_api_version
+      }
+      env {
+        name  = "AZURE_CLIENT_ID"
+        value = azurerm_user_assigned_identity.chat.client_id
       }
       env {
         name        = "APPLICATIONINSIGHTS_CONNECTION_STRING"
@@ -104,13 +136,9 @@ resource "azurerm_container_app" "chat" {
       percentage      = 100
     }
   }
-}
 
-resource "azurerm_role_assignment" "chat_acr_pull" {
-  scope                = var.container_registry_id
-  role_definition_name = "AcrPull"
-  principal_id         = azurerm_container_app.chat.identity[0].principal_id
-
-  # Role assignment can race with AAD propagation for just-created identities.
-  skip_service_principal_aad_check = true
+  depends_on = [
+    azurerm_role_assignment.chat_acr_pull,
+    azurerm_role_assignment.container_app_openai_user,
+  ]
 }

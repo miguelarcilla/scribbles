@@ -82,3 +82,69 @@ variable "app_image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "azure_openai_api_version" {
+  description = "API version passed to the chat app for Azure OpenAI calls."
+  type        = string
+  default     = "2025-01-01-preview"
+}
+
+variable "jumpbox_admin_username" {
+  description = "Admin username for the jumpbox VM."
+  type        = string
+  default     = "badmin"
+}
+
+variable "jumpbox_admin_password" {
+  description = "Admin password for the jumpbox VM."
+  type        = string
+  sensitive   = true
+}
+
+variable "jumpbox_vm_size" {
+  description = "VM size for the jumpbox VM."
+  type        = string
+  default     = "Standard_D4s_v5"
+}
+
+variable "jumpbox_license_type" {
+  description = "License type for the jumpbox VM."
+  type        = string
+  default     = "Windows_Client"
+}
+
+variable "jumpbox_os_disk_storage_account_type" {
+  description = "OS disk storage account type for the jumpbox VM."
+  type        = string
+  default     = "Premium_LRS"
+}
+
+variable "jumpbox_os_disk_size_gb" {
+  description = "OS disk size (GB) for the jumpbox VM."
+  type        = number
+  default     = 127
+}
+
+variable "jumpbox_image_publisher" {
+  description = "Image publisher for the jumpbox VM."
+  type        = string
+  default     = "microsoftwindowsdesktop"
+}
+
+variable "jumpbox_image_offer" {
+  description = "Image offer for the jumpbox VM."
+  type        = string
+  default     = "windows-11"
+}
+
+variable "jumpbox_image_sku" {
+  description = "Image SKU for the jumpbox VM."
+  type        = string
+  default     = "win11-25h2-ent"
+}
+
+variable "jumpbox_image_version" {
+  description = "Image version for the jumpbox VM."
+  type        = string
+  default     = "latest"
+}

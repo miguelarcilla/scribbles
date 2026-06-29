@@ -43,6 +43,10 @@ variable "storage_account_id" {
   type = string
 }
 
+variable "storage_blob_endpoint" {
+  type = string
+}
+
 variable "cosmosdb_account_id" {
   type = string
 }
