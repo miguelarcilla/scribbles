@@ -12,7 +12,7 @@ on:
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    if: (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
@@ -47,6 +47,29 @@ jobs:
           github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
 
+  build_only_job:
+    if: ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.ref != 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.head.ref != 'main')
+    runs-on: ubuntu-latest
+    name: Build Only Job
+    defaults:
+      run:
+        working-directory: cert-poster-generator
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          lfs: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: cert-poster-generator/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build app
+        run: npm run build
+
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
@@ -57,3 +80,4 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: "close"
+          skip_deploy_on_missing_secrets: true
