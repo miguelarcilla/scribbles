@@ -118,8 +118,12 @@ resource "azurerm_container_app" "chat" {
         value = azurerm_user_assigned_identity.chat.client_id
       }
       env {
-        name        = "APPLICATIONINSIGHTS_CONNECTION_STRING"
-        secret_name = "appinsights-connection-string"
+        name  = "AZURE_APIM_ENDPOINT"
+        value = var.apim_gateway_url
+      }
+      env {
+        name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+        value = var.app_insights_connection_string
       }
     }
 
@@ -127,11 +131,6 @@ resource "azurerm_container_app" "chat" {
       name                = "http-scale"
       concurrent_requests = 50
     }
-  }
-
-  secret {
-    name  = "appinsights-connection-string"
-    value = var.app_insights_connection_string
   }
 
   ingress {
