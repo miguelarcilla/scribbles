@@ -1,9 +1,25 @@
 ###############################################################################
 # API Management layer (exposure + scale-out)
-# APIM is deployed into the VNet in Internal mode, fronts the Microsoft Foundry
+# APIM is deployed with External VNet integration, fronts the Microsoft Foundry
 # inference endpoint, and load balances across backend instances using a
 # round-robin policy. It authenticates to Foundry with its managed identity
 # (Cognitive Services OpenAI User), removing keys from the application tier.
+#
+# Resources created:
+#   - azurerm_api_management                    — Standard V2, External VNet
+#   - azurerm_role_assignment                   — Cognitive Services OpenAI User
+#                                                 on Foundry account
+#   - azurerm_api_management_named_value (x2)   — Foundry-API-Version,
+#                                                 Foundry-Endpoint-Base-URL
+#   - azurerm_api_management_backend (x2)       — foundry-primary,
+#                                                 foundry-secondary
+#   - azurerm_api_management_api                — azure-openai (OpenAI surface)
+#   - azurerm_api_management_api_operation (x3) — CreateChatCompletion,
+#                                                 CreateEmbedding, ListModels
+#   - azurerm_api_management_api_policy         — global round-robin + MSI auth
+#   - azurerm_api_management_api_operation_policy — chat completions overrides
+#   - azurerm_api_management_logger             — Application Insights logger
+#   - azurerm_monitor_diagnostic_setting        — GatewayLogs + AllMetrics
 ###############################################################################
 
 resource "azurerm_api_management" "this" {

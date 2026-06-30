@@ -3,6 +3,15 @@
 # These resources are the "bring-your-own" dependencies that the Microsoft
 # Foundry Agent Service manages (chat memory + agent state + file storage).
 # Both are network isolated and reachable only through private endpoints.
+#
+# Resources created:
+#   - azurerm_storage_account            — blob storage for Foundry agent files
+#   - azurerm_private_endpoint           — private endpoint for blob storage
+#   - azurerm_cosmosdb_account           — Cosmos DB (SQL API) for agent thread
+#                                          memory and chat state
+#   - azurerm_private_endpoint           — private endpoint for Cosmos DB
+#   - azurerm_monitor_diagnostic_setting — Storage account diagnostics
+#   - azurerm_monitor_diagnostic_setting — Cosmos DB diagnostics
 ###############################################################################
 
 # ---- Azure Storage (Foundry agent file/blob storage) ----

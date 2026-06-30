@@ -3,6 +3,29 @@
 # Best-practice subnet design for a network-isolated Microsoft Foundry workload.
 # Address space defaults to 192.168.0.0/16 (the Foundry Agent Service delegated
 # subnet historically rejected 10.0.0.0/8).
+#
+# Resources created:
+#   - azurerm_virtual_network            — workload VNet (192.168.0.0/16)
+#   - azurerm_subnet (x9)               — container_apps, apim, agents_egress,
+#                                         private_endpoints, data, firewall,
+#                                         bastion, jumpbox, build_agents
+#   - azurerm_network_security_group (x6)— per-subnet NSGs: private_endpoints,
+#                                         container_apps, agents_egress, apim,
+#                                         bastion, management
+#   - azurerm_subnet_network_security_group_association (x7)
+#   - azurerm_private_dns_zone          — one per private-linked service
+#                                         (openai, cognitiveservices, aiservices,
+#                                          search, blob, cosmos, vault,
+#                                          container_apps)
+#   - azurerm_private_dns_zone_virtual_network_link — links each zone to VNet
+#
+# Commented-out (optional):
+#   - azurerm_public_ip                 — Firewall public IP
+#   - azurerm_firewall_policy           — Egress FQDN filtering policy
+#   - azurerm_firewall_policy_rule_collection_group
+#   - azurerm_firewall                  — Azure Firewall (Standard)
+#   - azurerm_route_table               — UDR forcing egress through firewall
+#   - azurerm_subnet_route_table_association (x3)
 ###############################################################################
 
 locals {

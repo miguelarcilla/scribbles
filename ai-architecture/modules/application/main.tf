@@ -4,6 +4,20 @@
 # is VNet-injected into the delegated container apps subnet with an internal
 # load balancer, so the app is only reachable from inside the network (e.g.
 # fronted by Application Gateway / APIM developer portal in a full build-out).
+#
+# Resources created:
+#   - azurerm_container_app_environment  — VNet-injected, internal LB,
+#                                          zone-redundant, Consumption profile
+#   - azurerm_private_endpoint           — private endpoint for the CAE
+#   - azurerm_user_assigned_identity     — managed identity for the chat app
+#   - azurerm_role_assignment (x3)       — AcrPull on ACR,
+#                                          Cognitive Services OpenAI User
+#                                          on Foundry account,
+#                                          Cognitive Services OpenAI User
+#                                          on APIM
+#   - azurerm_container_app             — chat UI container app with secrets:
+#                                          AZURE_APIM_ENDPOINT,
+#                                          APPLICATIONINSIGHTS_CONNECTION_STRING
 ###############################################################################
 
 resource "azurerm_container_app_environment" "this" {
