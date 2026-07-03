@@ -4,6 +4,26 @@
 # Azure AI Search knowledge store, and a model deployment. All inference and
 # management traffic is private; the agent egresses through the delegated
 # subnet (routed through Azure Firewall by the network layer).
+#
+# Resources created:
+#   - azurerm_search_service             — Azure AI Search (knowledge store)
+#   - azurerm_private_endpoint           — private endpoint for AI Search
+#   - azurerm_cognitive_account          — Microsoft Foundry account
+#   - azurerm_private_endpoint           — private endpoint for Foundry
+#   - azurerm_cognitive_deployment       — GPT model deployment
+#   - azurerm_cognitive_account_project  — Foundry project
+#   - azapi_resource (x3)               — Cosmos DB connection, Storage
+#                                          connection, AI Search connection
+#                                          (BYO Agent Service dependencies)
+#   - azapi_resource                    — Foundry project capability host
+#                                          (agent service network injection)
+#   - azurerm_role_assignment (x5)      — Storage Blob Data Contributor,
+#                                          Cosmos DB Operator,
+#                                          Search Index Data Contributor,
+#                                          Search Service Contributor,
+#                                          Search Index Data Reader (Foundry)
+#   - azurerm_monitor_diagnostic_setting — Foundry account diagnostics
+#   - time_sleep                         — stabilisation wait after account
 ###############################################################################
 
 locals {

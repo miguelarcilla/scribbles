@@ -13,22 +13,55 @@ app = Flask(__name__)
 
 
 def create_client() -> AzureOpenAI:
-    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    """
+    Create an AzureOpenAI client configured for either direct Foundry access or API Management routing.
+    
+    Priority:
+    1. If AZURE_APIM_ENDPOINT is set, use APIM with managed identity or subscription key
+    2. Otherwise, use direct Foundry endpoint
+    """
     deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-
-    if not endpoint:
-        raise RuntimeError("AZURE_OPENAI_ENDPOINT is required")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+    
     if not deployment:
         raise RuntimeError("AZURE_OPENAI_DEPLOYMENT is required")
 
-    credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
-    token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")
+    apim_endpoint = os.getenv("AZURE_APIM_ENDPOINT", "").strip()
+    apim_key = os.getenv("AZURE_APIM_SUBSCRIPTION_KEY", "").strip()
 
-    return AzureOpenAI(
-        azure_endpoint=endpoint,
-        azure_ad_token_provider=token_provider,
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview"),
-    )
+    if apim_endpoint:
+        # Use API Management
+        if apim_key:
+            # Subscription key-based authentication
+            return AzureOpenAI(
+                azure_endpoint=apim_endpoint,
+                api_key=apim_key,
+                api_version=api_version,
+            )
+        else:
+            # Managed identity authentication via DefaultAzureCredential
+            credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
+            # APIM requires the "https://management.azure.com/.default" scope for managed identity
+            token_provider = get_bearer_token_provider(credential, "https://management.azure.com/.default")
+            return AzureOpenAI(
+                azure_endpoint=apim_endpoint,
+                azure_ad_token_provider=token_provider,
+                api_version=api_version,
+            )
+    else:
+        # Use direct Foundry endpoint
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        if not endpoint:
+            raise RuntimeError("AZURE_OPENAI_ENDPOINT or AZURE_APIM_ENDPOINT is required")
+
+        credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
+        token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")
+
+        return AzureOpenAI(
+            azure_endpoint=endpoint,
+            azure_ad_token_provider=token_provider,
+            api_version=api_version,
+        )
 
 
 client = create_client()

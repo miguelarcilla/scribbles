@@ -1,7 +1,21 @@
 ###############################################################################
 # Management layer
 # Shared observability and secrets services: Log Analytics, Application
-# Insights, and a network-isolated Key Vault.
+# Insights, a network-isolated Key Vault, Azure Container Registry, a
+# management jumpbox VM, and Azure Bastion for secure access.
+#
+# Resources created:
+#   - azurerm_log_analytics_workspace    — centralised log sink
+#   - azurerm_application_insights       — APM / telemetry for Container Apps
+#                                          and APIM
+#   - azurerm_container_registry         — private ACR for container images
+#   - azurerm_key_vault                  — secrets store (private endpoint,
+#                                          RBAC-enabled)
+#   - azurerm_monitor_diagnostic_setting — Key Vault audit + AllMetrics logs
+#   - azurerm_private_endpoint           — private endpoint for Key Vault
+#   - azurerm_network_interface          — NIC for jumpbox VM
+#   - azurerm_windows_virtual_machine    — management jump box
+#   - azurerm_bastion_host               — Azure Bastion (Developer SKU)
 ###############################################################################
 
 resource "azurerm_log_analytics_workspace" "this" {

@@ -4,6 +4,20 @@
 # is VNet-injected into the delegated container apps subnet with an internal
 # load balancer, so the app is only reachable from inside the network (e.g.
 # fronted by Application Gateway / APIM developer portal in a full build-out).
+#
+# Resources created:
+#   - azurerm_container_app_environment  — VNet-injected, internal LB,
+#                                          zone-redundant, Consumption profile
+#   - azurerm_private_endpoint           — private endpoint for the CAE
+#   - azurerm_user_assigned_identity     — managed identity for the chat app
+#   - azurerm_role_assignment (x3)       — AcrPull on ACR,
+#                                          Cognitive Services OpenAI User
+#                                          on Foundry account,
+#                                          Cognitive Services OpenAI User
+#                                          on APIM
+#   - azurerm_container_app             — chat UI container app with secrets:
+#                                          AZURE_APIM_ENDPOINT,
+#                                          APPLICATIONINSIGHTS_CONNECTION_STRING
 ###############################################################################
 
 resource "azurerm_container_app_environment" "this" {
@@ -65,6 +79,14 @@ resource "azurerm_role_assignment" "container_app_openai_user" {
   skip_service_principal_aad_check = true
 }
 
+resource "azurerm_role_assignment" "container_app_apim_access" {
+  scope                = var.apim_id
+  role_definition_name = "Cognitive Services OpenAI User"
+  principal_id         = azurerm_user_assigned_identity.chat.principal_id
+
+  skip_service_principal_aad_check = true
+}
+
 resource "azurerm_container_app" "chat" {
   name                         = "ca-chatui-${var.name_suffix}"
   container_app_environment_id = azurerm_container_app_environment.this.id
@@ -110,8 +132,12 @@ resource "azurerm_container_app" "chat" {
         value = azurerm_user_assigned_identity.chat.client_id
       }
       env {
-        name        = "APPLICATIONINSIGHTS_CONNECTION_STRING"
-        secret_name = "appinsights-connection-string"
+        name  = "AZURE_APIM_ENDPOINT"
+        value = var.apim_gateway_url
+      }
+      env {
+        name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+        value = var.app_insights_connection_string
       }
     }
 
@@ -119,11 +145,6 @@ resource "azurerm_container_app" "chat" {
       name                = "http-scale"
       concurrent_requests = 50
     }
-  }
-
-  secret {
-    name  = "appinsights-connection-string"
-    value = var.app_insights_connection_string
   }
 
   ingress {

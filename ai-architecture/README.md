@@ -28,11 +28,12 @@ See [`diagrams/architecture.mmd`](./diagrams/architecture.mmd) for the Mermaid d
 ## How the pieces connect
 
 1. A user calls the **API Management** gateway (Internal VNet).
-2. APIM authenticates to **Microsoft Foundry** with its **managed identity** (`Cognitive Services OpenAI User`) and **round-robin** load balances across backend instances, retrying on `429`/`5xx`.
-3. The **Container Apps** chat tier calls inference through the APIM gateway and emits telemetry to **Application Insights**.
-4. **Foundry** reaches all of its dependencies privately: **AI Search** (grounding/vectors), **Storage** (files), and **Cosmos DB** (agent thread / chat memory) — each via a **Private Endpoint** resolved through **Private DNS zones**.
-5. **Foundry Agent Service** egress is bound to the delegated `snet-agentsEgress` subnet and forced through **Azure Firewall** for FQDN filtering.
-6. Public network access is **disabled** on Foundry, Search, Storage, Cosmos, and Key Vault.
+2. APIM **imports the Azure OpenAI API** from **Foundry** and exposes defined operations (chat completions, embeddings, model listing).
+3. APIM authenticates to **Microsoft Foundry** with its **managed identity** (`Cognitive Services OpenAI User`) and **round-robin** load balances across backend instances, retrying on `429`/`5xx`.
+4. The **Container Apps** chat tier calls inference through the APIM gateway and emits telemetry to **Application Insights**.
+5. **Foundry** reaches all of its dependencies privately: **AI Search** (grounding/vectors), **Storage** (files), and **Cosmos DB** (agent thread / chat memory) — each via a **Private Endpoint** resolved through **Private DNS zones**.
+6. **Foundry Agent Service** egress is bound to the delegated `snet-agentsEgress` subnet and forced through **Azure Firewall** for FQDN filtering.
+7. Public network access is **disabled** on Foundry, Search, Storage, Cosmos, and Key Vault.
 
 ## Subnet plan (`192.168.0.0/16`)
 
@@ -51,9 +52,53 @@ See [`diagrams/architecture.mmd`](./diagrams/architecture.mmd) for the Mermaid d
 > `192.168.0.0/16` is used because the Foundry Agent Service delegated subnet historically
 > rejected the `10.0.0.0/8` range.
 
+## Requirements
+
+**Local tools:**
+- **PowerShell** 5.0+ (Windows) or **PowerShell Core** 7.0+ (cross-platform)
+- **Terraform** >= 1.6
+- **Docker** (for building container images; required for `deploy-app.ps1`)
+- **Python** 3.11+ (for running or developing the chat app locally)
+- **Azure CLI** (`az` command, with login: `az login`)
+
+**Terraform providers:**
+- `hashicorp/azurerm` ~> 4.20
+- `Azure/azapi` ~> 2.2
+- `hashicorp/random`
+
+**Azure permissions:**
+- Authenticated Azure context with rights to create resources and role assignments (Foundry, ACR, Container Apps, Key Vault, RBAC).
+
 ## Usage
 
-```bash
+### Quick start: One-command deployment
+
+**Recommended:** Use the `deploy-app.ps1` script for a full build-and-deploy in one step:
+
+```powershell
+cd ai-architecture
+./deploy-app.ps1 -ImageName foundry-chat -ImageTag latest -AutoApprove
+```
+
+This script:
+1. Creates prerequisite infrastructure (including Azure Container Registry)
+2. Builds and pushes the chat app Docker image
+3. Applies the full Terraform stack
+
+**Optional flags:**
+- `-SubscriptionId <guid-or-name>` — target a specific subscription
+- `-AutoApprove` — skip Terraform confirmation prompts
+
+**Example with all options:**
+```powershell
+./deploy-app.ps1 -ImageName foundry-chat -ImageTag v1 -SubscriptionId mysubscription -AutoApprove
+```
+
+### Manual step-by-step deployment
+
+If you prefer fine-grained control:
+
+```powershell
 cd ai-architecture
 cp terraform.tfvars.example terraform.tfvars   # edit values
 terraform init
@@ -61,33 +106,30 @@ terraform plan
 terraform apply
 ```
 
-### One-command app deploy (build/push/apply)
+Then build and push the app image separately using Docker and Azure Container Registry commands.
 
-For the chat app under `app/`, you can run a staged deployment that:
-1. Creates prerequisite infra (including ACR),
-2. Builds and pushes the app image,
-3. Applies the full Terraform stack.
+### Configuring the chat app
 
-```powershell
-cd ai-architecture
-./deploy-app.ps1 -ImageName foundry-chat -ImageTag latest
-```
+**Direct Foundry vs. API Management:**
+The deployed chat app can route through API Management or directly to Foundry. After deployment, set these environment variables on the Container App:
 
-Optional flags:
-- `-SubscriptionId <subscription-guid-or-name>`
-- `-AutoApprove`
+- **Option 1: Direct Foundry** (default)
+  - `AZURE_OPENAI_ENDPOINT` — your Foundry instance endpoint
+  - `AZURE_OPENAI_DEPLOYMENT` — model deployment name
+  - `AZURE_OPENAI_API_VERSION` — API version
 
-Example:
+- **Option 2: Via API Management** (recommended for production)
+  - `AZURE_APIM_ENDPOINT` — APIM gateway URL (e.g., `https://apim-instance.azure-api.net/foundry`)
+  - `AZURE_APIM_SUBSCRIPTION_KEY` — subscription key (or leave empty to use Container App managed identity)
+  - `AZURE_OPENAI_DEPLOYMENT` — model deployment name
+  - `AZURE_OPENAI_API_VERSION` — API version
 
-```powershell
-./deploy-app.ps1 -ImageName foundry-chat -ImageTag v1 -AutoApprove
-```
+**Managed identity setup:**
+- The Container App's managed identity is automatically granted the `Cognitive Services OpenAI User` role on both **Foundry** and **API Management** during infrastructure deployment
+- To use managed identity with APIM, leave `AZURE_APIM_SUBSCRIPTION_KEY` empty and the app will use `DefaultAzureCredential` with the management token scope
+- For APIM + subscription key, store the key securely in Key Vault and inject it into the Container App environment
 
-### Requirements
-
-- Terraform >= 1.6
-- Providers: `hashicorp/azurerm` ~> 4.20, `Azure/azapi` ~> 2.2, `hashicorp/random`
-- An authenticated Azure context (`az login`) with rights to create the resources and role assignments.
+See [app/README.md](./app/README.md) for technical details.
 
 ### Key variables
 
@@ -100,10 +142,47 @@ Example:
 | `gpt_model` | `gpt-4o` / `GlobalStandard` / 50 | Model deployed to Foundry and exposed via APIM |
 | `publisher_name` / `publisher_email` | Contoso placeholders | APIM publisher details |
 
+## Azure OpenAI API Operations
+
+APIM imports and exposes the following Azure OpenAI operations from Foundry:
+
+| Operation | Method | Endpoint | Description |
+|-----------|--------|----------|-------------|
+| **Create Chat Completion** | POST | `/openai/deployments/{deployment-id}/chat/completions` | Generate chat responses from a model deployment |
+| **Create Embeddings** | POST | `/openai/deployments/{deployment-id}/embeddings` | Generate embedding vectors for text |
+| **List Models** | GET | `/openai/models` | Retrieve available models and details |
+
+**Example: Call chat completions through APIM**
+```bash
+curl -X POST \
+  "${APIM_GATEWAY_URL}/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview" \
+  -H "Ocp-Apim-Subscription-Key: ${APIM_SUBSCRIPTION_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+**APIM Gateway URL:** Available in Terraform outputs as `apim_gateway_url` and `azure_openai_api_endpoint`.
+
+**Authentication:**
+- **Subscription Key** (for testing): Include `Ocp-Apim-Subscription-Key` header
+- **Managed Identity** (production): Use `DefaultAzureCredential` with management token scope (`https://management.azure.com/.default`)
+
+All requests are load-balanced across Foundry backends with automatic retry on throttle (429) or server errors (5xx).
+
 ## Outputs
 
-`resource_group_name`, `vnet_id`, `apim_gateway_url`, `foundry_account_name`,
-`foundry_project_endpoint`, `container_app_fqdn`, `key_vault_uri`.
+Root-level Terraform outputs include:
+- `resource_group_name` — Resource group name
+- `vnet_id` — Virtual network ID
+- `apim_gateway_url` — APIM gateway base URL
+- `azure_openai_api_endpoint` — Full Azure OpenAI API base path through APIM
+- `azure_openai_chat_completions_endpoint` — Chat completions endpoint URL
+- `foundry_account_name` — Foundry account name
+- `foundry_project_endpoint` — Foundry project endpoint
+- `container_app_fqdn` — Chat application ingress FQDN
+- `container_registry_login_server` — ACR server for image pulls
 
 ## Notes & production hardening
 
