@@ -52,10 +52,10 @@ variable "gpt_model" {
     capacity = number
   })
   default = {
-    name     = "gpt-4o"
-    version  = "2024-11-20"
+    name     = "gpt-4.1"
+    version  = "2025-04-14"
     sku_name = "GlobalStandard"
-    capacity = 50
+    capacity = 10
   }
 }
 
@@ -69,6 +69,12 @@ variable "publisher_email" {
   description = "API Management publisher email."
   type        = string
   default     = "platform-team@contoso.example"
+}
+
+variable "apim_sku_name" {
+  description = "SKU name for API Management. Use 'Developer_1' for dev/test (no SLA). For production use 'Premium_1' or higher with availability zones."
+  type        = string
+  default     = "Developer_1"
 }
 
 variable "app_image_name" {

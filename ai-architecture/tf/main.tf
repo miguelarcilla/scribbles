@@ -103,6 +103,9 @@ module "ai" {
   agents_egress_subnet_id     = module.network.agents_egress_subnet_id
   log_analytics_workspace_id  = module.management.log_analytics_workspace_id
 
+  app_insights_id                = module.management.app_insights_id
+  app_insights_connection_string = module.management.app_insights_connection_string
+
   gpt_model = var.gpt_model
 
   # Bring-your-own Foundry Agent Service dependencies.
@@ -155,6 +158,7 @@ module "apim" {
   location                         = var.location
   name_suffix                      = local.name_suffix
   apim_subnet_id                   = module.network.apim_subnet_id
+  apim_sku_name                    = var.apim_sku_name
   log_analytics_workspace_id       = module.management.log_analytics_workspace_id
   app_insights_id                  = module.management.app_insights_id
   app_insights_instrumentation_key = module.management.app_insights_instrumentation_key

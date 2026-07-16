@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.6.0"
+  required_version = ">= 1.13, < 2.0"
 
   required_providers {
     azurerm = {
@@ -8,7 +8,7 @@ terraform {
     }
     azapi = {
       source  = "Azure/azapi"
-      version = "~> 2.2"
+      version = "~> 2.6"
     }
     random = {
       source  = "hashicorp/random"
@@ -25,6 +25,9 @@ provider "azurerm" {
   storage_use_azuread = true
 
   features {
+    cognitive_account {
+      purge_soft_delete_on_destroy = true
+    }
     key_vault {
       purge_soft_delete_on_destroy = false
     }

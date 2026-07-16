@@ -100,10 +100,26 @@ resource "azurerm_cognitive_account" "foundry" {
 
 # Foundry account can remain in Accepted briefly after create. Delay dependent
 # control-plane operations to avoid transient 400 AccountProvisioningStateInvalid.
+# On destroy, wait 60 s before the purge action fires so the soft-delete
+# lifecycle has time to register the deletion.
 resource "time_sleep" "wait_for_foundry_ready" {
-  depends_on      = [azurerm_cognitive_account.foundry]
-  create_duration = "120s"
+  depends_on       = [azurerm_cognitive_account.foundry]
+  create_duration  = "120s"
+  destroy_duration = "60s"
 }
+
+# Purge the soft-deleted Foundry account on destroy so that re-applying with
+# the same name does not fail with a name-conflict error.
+resource "azapi_resource_action" "purge_foundry" {
+  method      = "DELETE"
+  resource_id = "/subscriptions/${data.azurerm_subscription.current.subscription_id}/providers/Microsoft.CognitiveServices/locations/${var.location}/resourceGroups/${var.resource_group_name}/deletedAccounts/${local.foundry_account_name}"
+  type        = "Microsoft.CognitiveServices/locations/resourceGroups/deletedAccounts@2025-09-01"
+  when        = "destroy"
+
+  depends_on = [time_sleep.wait_for_foundry_ready]
+}
+
+data "azurerm_subscription" "current" {}
 
 resource "azurerm_private_endpoint" "foundry" {
   name                = "pep-foundry-${var.name_suffix}"
@@ -305,4 +321,37 @@ resource "azurerm_monitor_diagnostic_setting" "foundry" {
   enabled_metric {
     category = "AllMetrics"
   }
+}
+
+###############################################################################
+# Application Insights connection - registers AppInsights with the Foundry
+# account so that the Foundry portal can display traces and agents can use
+# it as a connected telemetry resource.
+###############################################################################
+resource "azapi_resource" "conn_appinsights" {
+  type      = "Microsoft.CognitiveServices/accounts/connections@2025-06-01"
+  name      = "appinsights-connection"
+  parent_id = azurerm_cognitive_account.foundry.id
+
+  schema_validation_enabled = false
+
+  body = {
+    properties = {
+      category      = "AppInsights"
+      target        = var.app_insights_id
+      authType      = "ApiKey"
+      isSharedToAll = true
+
+      credentials = {
+        key = var.app_insights_connection_string
+      }
+
+      metadata = {
+        ApiType    = "Azure"
+        ResourceId = var.app_insights_id
+      }
+    }
+  }
+
+  depends_on = [time_sleep.wait_for_foundry_ready]
 }
