@@ -38,7 +38,8 @@ function Invoke-TerraformApply {
 }
 
 # Get the repository root and app directory paths
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$tfDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent ($tfDir)
 $appDir = Join-Path $repoRoot "app"
 
 # Validate that the Dockerfile exists in the expected location
@@ -47,7 +48,7 @@ if (-not (Test-Path (Join-Path $appDir "Dockerfile"))) {
 }
 
 # Change to repository root for subsequent operations
-Push-Location $repoRoot
+Push-Location $tfDir
 try {
     # Set Azure subscription if specified
     if ($SubscriptionId) {
