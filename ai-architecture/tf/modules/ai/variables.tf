@@ -60,6 +60,17 @@ variable "private_dns_zone_ids" {
   })
 }
 
+variable "app_insights_id" {
+  description = "Resource ID of Application Insights. Used to register AppInsights as a connection on the Foundry account."
+  type        = string
+}
+
+variable "app_insights_connection_string" {
+  description = "Application Insights connection string for the Foundry AppInsights connection."
+  type        = string
+  sensitive   = true
+}
+
 variable "tags" {
   type = map(string)
 }

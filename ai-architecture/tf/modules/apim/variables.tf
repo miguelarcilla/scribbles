@@ -14,6 +14,17 @@ variable "apim_subnet_id" {
   type = string
 }
 
+variable "apim_sku_name" {
+  type        = string
+  description = "SKU name for API Management. Use 'Developer_1' for dev/test (no SLA, no zones). For production, use 'Premium_1' or higher and enable availability zones."
+  default     = "Developer_1"
+
+  validation {
+    condition     = can(regex("^(Developer|Basic|StandardV2|Premium)_[0-9]+$", var.apim_sku_name))
+    error_message = "apim_sku_name must be a valid APIM SKU like 'Developer_1', 'BasicV2_1', 'StandardV2_1', or 'Premium_1'."
+  }
+}
+
 variable "log_analytics_workspace_id" {
   type = string
 }

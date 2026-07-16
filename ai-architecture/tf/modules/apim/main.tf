@@ -29,9 +29,8 @@ resource "azurerm_api_management" "this" {
   publisher_name      = var.publisher_name
   publisher_email     = var.publisher_email
 
-  # Developer tier supports Internal VNet injection for non-production reference
-  # deployments. Use Premium (with zones) for production.
-  sku_name = "Developer_1"
+  # Use 'Developer_1' for dev/test. Switch to 'Premium_1' (with zones) for production.
+  sku_name = var.apim_sku_name
 
   virtual_network_type = "Internal"
   virtual_network_configuration {
